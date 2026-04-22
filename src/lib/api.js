@@ -42,9 +42,19 @@ export const api = {
     window.localStorage.removeItem(ADMIN_TOKEN_KEY);
   },
   login(email, password) {
-    return request('/api/auth/login', {
+    return request('/api/login', {
       method: 'POST',
       body: { email, password },
+    });
+  },
+  getProducts() {
+    return request('/api/products');
+  },
+  saveProducts(products) {
+    return request('/api/products', {
+      method: 'PUT',
+      auth: true,
+      body: { products },
     });
   },
   getContent() {

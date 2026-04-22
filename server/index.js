@@ -24,6 +24,10 @@ const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@25carat.local';
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
 const JWT_SECRET = process.env.JWT_SECRET || 'change-this-secret-before-deploy';
 const TOKEN_TTL_MS = 1000 * 60 * 60 * 24 * 7;
+const SUPABASE_URL = process.env.SUPABASE_URL || '';
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+const SUPABASE_STATE_TABLE = process.env.SUPABASE_STATE_TABLE || 'app_state';
+const SUPABASE_STATE_KEY = process.env.SUPABASE_STATE_KEY || 'main';
 
 const defaultContent = {
   products,
@@ -144,6 +148,14 @@ function requireAdmin(req, res) {
 }
 
 async function readDb() {
+  if (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
+    try {
+      return await readSupabaseDb();
+    } catch (error) {
+      console.warn(`Supabase read failed, using file fallback: ${error.message}`);
+    }
+  }
+
   if (!existsSync(DB_PATH)) {
     await writeDb(defaultDb);
     return defaultDb;
@@ -163,8 +175,78 @@ async function readDb() {
 }
 
 async function writeDb(db) {
+  if (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
+    try {
+      await writeSupabaseDb(db);
+      return;
+    } catch (error) {
+      console.warn(`Supabase write failed, using file fallback: ${error.message}`);
+    }
+  }
+
   await mkdir(dirname(DB_PATH), { recursive: true });
   await writeFile(DB_PATH, JSON.stringify(db, null, 2));
+}
+
+function normalizeDb(saved) {
+  return {
+    ...defaultDb,
+    ...saved,
+    content: {
+      ...defaultContent,
+      ...(saved.content || {}),
+    },
+    orders: Array.isArray(saved.orders) ? saved.orders : [],
+    enquiries: Array.isArray(saved.enquiries) ? saved.enquiries : [],
+  };
+}
+
+async function supabaseRequest(path, options = {}) {
+  const response = await fetch(`${SUPABASE_URL.replace(/\/$/, '')}/rest/v1/${path}`, {
+    ...options,
+    headers: {
+      apikey: SUPABASE_SERVICE_ROLE_KEY,
+      Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+      'Content-Type': 'application/json',
+      ...(options.headers || {}),
+    },
+  });
+
+  const text = await response.text();
+  const data = text ? JSON.parse(text) : null;
+
+  if (!response.ok) {
+    throw new Error(data?.message || data?.error || `Supabase request failed: ${response.status}`);
+  }
+
+  return data;
+}
+
+async function readSupabaseDb() {
+  const rows = await supabaseRequest(
+    `${SUPABASE_STATE_TABLE}?key=eq.${encodeURIComponent(SUPABASE_STATE_KEY)}&select=value`,
+  );
+
+  if (!rows?.length) {
+    await writeSupabaseDb(defaultDb);
+    return defaultDb;
+  }
+
+  return normalizeDb(rows[0].value || {});
+}
+
+async function writeSupabaseDb(db) {
+  await supabaseRequest(`${SUPABASE_STATE_TABLE}?on_conflict=key`, {
+    method: 'POST',
+    headers: {
+      Prefer: 'resolution=merge-duplicates,return=minimal',
+    },
+    body: JSON.stringify({
+      key: SUPABASE_STATE_KEY,
+      value: normalizeDb(db),
+      updated_at: new Date().toISOString(),
+    }),
+  });
 }
 
 function createOrder(payload, content) {
@@ -211,7 +293,7 @@ async function routeRequest(req, res) {
       return;
     }
 
-    if (req.method === 'POST' && path === '/api/auth/login') {
+    if (req.method === 'POST' && (path === '/api/auth/login' || path === '/api/login')) {
       const body = await parseJsonBody(req);
       if (body.email === ADMIN_EMAIL && body.password === ADMIN_PASSWORD) {
         jsonResponse(res, 200, { token: createToken(body.email), email: body.email });
@@ -226,6 +308,32 @@ async function routeRequest(req, res) {
 
     if (req.method === 'GET' && path === '/api/content') {
       jsonResponse(res, 200, db.content);
+      return;
+    }
+
+    if (req.method === 'GET' && path === '/api/products') {
+      jsonResponse(res, 200, db.content.products);
+      return;
+    }
+
+    if (req.method === 'PUT' && path === '/api/products') {
+      if (!requireAdmin(req, res)) return;
+      const body = await parseJsonBody(req);
+      const nextProducts = Array.isArray(body) ? body : body.products;
+      if (!Array.isArray(nextProducts)) {
+        jsonResponse(res, 400, { error: 'Products array required.' });
+        return;
+      }
+
+      const nextDb = {
+        ...db,
+        content: {
+          ...db.content,
+          products: nextProducts,
+        },
+      };
+      await writeDb(nextDb);
+      jsonResponse(res, 200, nextDb.content.products);
       return;
     }
 
@@ -273,13 +381,13 @@ async function routeRequest(req, res) {
       return;
     }
 
-    if (req.method === 'GET' && path === '/api/enquiries') {
+    if (req.method === 'GET' && (path === '/api/enquiries' || path === '/api/enquiry')) {
       if (!requireAdmin(req, res)) return;
       jsonResponse(res, 200, db.enquiries);
       return;
     }
 
-    if (req.method === 'POST' && path === '/api/enquiries') {
+    if (req.method === 'POST' && (path === '/api/enquiries' || path === '/api/enquiry')) {
       const body = await parseJsonBody(req);
       const enquiry = {
         id: `ENQ-${Date.now()}`,

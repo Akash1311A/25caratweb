@@ -4,7 +4,7 @@
 
 - Frontend: React + Vite
 - Backend: Node.js HTTP API
-- Database: `data/store.json` server-side JSON database
+- Database: Supabase recommended, `data/store.json` local fallback
 - Admin auth: signed token login
 
 ## Local Development
@@ -61,13 +61,16 @@ PORT=4000
 ADMIN_EMAIL=your-admin@email.com
 ADMIN_PASSWORD=strong-password
 JWT_SECRET=long-random-secret
-DB_PATH=/persistent/path/store.json
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+SUPABASE_STATE_TABLE=app_state
+SUPABASE_STATE_KEY=main
 ```
 
-For Railway, use:
+For local fallback or VPS persistent storage:
 
 ```bash
-DB_PATH=/app/data/store.json
+DB_PATH=/persistent/path/store.json
 ```
 
 Then attach a Railway Volume mounted at:
@@ -84,7 +87,21 @@ VITE_API_URL=https://your-api-domain.com
 
 If backend serves the frontend, you do not need `VITE_API_URL`.
 
-## Deploy Checklist
+## Supabase Setup
+
+Run this SQL in Supabase:
+
+```sql
+create table if not exists app_state (
+  key text primary key,
+  value jsonb not null,
+  updated_at timestamptz default now()
+);
+```
+
+Use `SUPABASE_SERVICE_ROLE_KEY` only on the backend hosting panel.
+
+## Render Free Deploy Checklist
 
 - Push this project to GitHub:
 
@@ -98,12 +115,23 @@ git push -u origin main
 ```
 
 - In Railway, create a new project from GitHub.
+- For free hosting, use Render Web Service from GitHub.
 - Select `Akash1311A/25caratweb`.
-- Railway will use `railway.json`.
+- Build command:
+
+```bash
+npm ci && npm run build
+```
+
+- Start command:
+
+```bash
+npm start
+```
+
 - Change default admin credentials.
 - Set a strong `JWT_SECRET`.
-- Make sure `DB_PATH` points to persistent storage.
-- Add a Railway Volume mounted at `/app/data`.
+- Set Supabase environment variables.
 - Run `npm run build`.
 - Start server with `npm start`.
 - Test `/api/health`.
