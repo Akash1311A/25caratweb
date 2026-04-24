@@ -20,18 +20,24 @@ export default function Home() {
   const [currentImage, setCurrentImage] = useState(0);
 
   const heroImages = useMemo(
-    () => [
-      products[0]?.image?.replace('w=600&h=800', 'w=1920&h=1200'),
-      collections[1]?.image?.replace('w=600&h=600', 'w=1920&h=1200'),
-      products[2]?.image?.replace('w=600&h=800', 'w=1920&h=1200'),
-      products[3]?.image?.replace('w=600&h=800', 'w=1920&h=1200'),
-    ].filter(Boolean),
-    [collections, products],
+    () =>
+      [
+        homeContent.heroImage,
+        products[0]?.image?.replace('w=600&h=800', 'w=1920&h=1200'),
+        collections[1]?.image?.replace('w=600&h=600', 'w=1920&h=1200'),
+        products[2]?.image?.replace('w=600&h=800', 'w=1920&h=1200'),
+        products[3]?.image?.replace('w=600&h=800', 'w=1920&h=1200'),
+      ].filter((value, index, array) => value && array.indexOf(value) === index),
+    [collections, homeContent.heroImage, products],
   );
 
   const heroFallbackImage = useMemo(
-    () => products[4]?.image?.replace('w=600&h=800', 'w=1920&h=1200') || products[0]?.image || '',
-    [products],
+    () =>
+      homeContent.heroImage ||
+      products[4]?.image?.replace('w=600&h=800', 'w=1920&h=1200') ||
+      products[0]?.image ||
+      '',
+    [homeContent.heroImage, products],
   );
 
   const featuredProducts = useMemo(() => products.slice(0, 4), [products]);

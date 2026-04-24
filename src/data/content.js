@@ -371,6 +371,7 @@ export const offerMessages = [
 
 export const homeContent = {
   heroBadge: 'Limited-time offers and new drops',
+  heroImage: 'https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=1920&h=1200&fit=crop',
   heroTitle: 'Exquisite Collections In Gold',
   heroSubtitle: 'Discover timeless elegance and exquisite craftsmanship. Each piece tells a story of luxury and grace.',
   heroPrimaryCta: 'Explore Collections',
@@ -424,4 +425,3 @@ export const brandInfo = {
   googleRating: 4.8,
   totalReviews: 500,
 };
-

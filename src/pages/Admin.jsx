@@ -85,6 +85,7 @@ const emptyReview = {
 
 const homeFields = [
   ['heroBadge', 'Hero badge'],
+  ['heroImage', 'Hero image URL'],
   ['heroTitle', 'Hero title'],
   ['heroSubtitle', 'Hero subtitle'],
   ['heroPrimaryCta', 'Primary button'],
@@ -307,6 +308,35 @@ export default function Admin() {
   ];
 
   const saveNotice = (message) => setStatusMessage(message);
+
+  const handleHomeHeroUpload = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      saveNotice('Please choose a valid image file.');
+      event.target.value = '';
+      return;
+    }
+
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      setHomeContent((current) => ({
+        ...current,
+        heroImage: String(reader.result || ''),
+      }));
+      saveNotice(`Hero image uploaded: ${file.name}`);
+      event.target.value = '';
+    };
+
+    reader.onerror = () => {
+      saveNotice('Image upload failed. Please try another file.');
+      event.target.value = '';
+    };
+
+    reader.readAsDataURL(file);
+  };
 
   useEffect(() => {
     if (!isAdminAuthenticated) return;
@@ -577,6 +607,45 @@ export default function Admin() {
                     )}
                   </Field>
                 ))}
+                <div className="md:col-span-2 rounded-2xl border border-[#e4d8f4] bg-[#fbf9ff] p-4">
+                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#6a5688]">Hero image preview</p>
+                  <p className="mt-2 text-sm leading-6 text-[#6c5d82]">
+                    Yahan wali image homepage ke sabse top hero section me sabse pehle show hogi.
+                  </p>
+                  <div className="mt-4 flex flex-wrap gap-3">
+                    <label className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-full border border-[#7b47c8] bg-[#7b47c8] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#5b2ca0]">
+                      <Image size={16} />
+                      Upload image
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleHomeHeroUpload}
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setHomeContent((current) => ({ ...current, heroImage: '' }));
+                        saveNotice('Hero image cleared.');
+                      }}
+                      className="inline-flex items-center justify-center gap-2 rounded-full border border-[#d9c9ef] bg-white px-4 py-2 text-sm font-semibold text-[#4b2c6f] transition hover:bg-[#f5efff]"
+                    >
+                      Remove image
+                    </button>
+                  </div>
+                  {homeContent.heroImage ? (
+                    <img
+                      src={homeContent.heroImage}
+                      alt="Homepage hero preview"
+                      className="mt-4 h-52 w-full rounded-2xl object-cover"
+                    />
+                  ) : (
+                    <div className="mt-4 rounded-2xl border border-dashed border-[#d9c9ef] px-4 py-8 text-sm text-[#8a7a9f]">
+                      Hero image URL add karo, preview yahan dikh jayega.
+                    </div>
+                  )}
+                </div>
                 <Field label="Offer ticker messages" hint="One message per line." className="md:col-span-2">
                   <textarea className={inputClassName(true)} value={offerMessages.join('\n')} onChange={(event) => { setOfferMessages(splitLines(event.target.value)); saveNotice('Offer messages updated.'); }} />
                 </Field>
