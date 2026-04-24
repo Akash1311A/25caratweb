@@ -1,10 +1,10 @@
 import {
-  addOrder,
-  getOrders,
+  getProducts,
   handleOptions,
   readJsonBody,
   requireAdmin,
   setCorsHeaders,
+  setProducts,
 } from './_lib/state.js';
 
 export default function handler(req, res) {
@@ -15,17 +15,24 @@ export default function handler(req, res) {
   setCorsHeaders(res);
 
   if (req.method === 'GET') {
-    if (!requireAdmin(req, res)) {
-      return;
-    }
-    res.status(200).json(getOrders());
+    res.status(200).json(getProducts());
     return;
   }
 
-  if (req.method === 'POST') {
+  if (req.method === 'PUT') {
+    if (!requireAdmin(req, res)) {
+      return;
+    }
+
     readJsonBody(req)
       .then((body) => {
-        res.status(201).json(addOrder(body));
+        const nextProducts = Array.isArray(body) ? body : body.products;
+        if (!Array.isArray(nextProducts)) {
+          res.status(400).json({ error: 'Products array is required.' });
+          return;
+        }
+
+        res.status(200).json(setProducts(nextProducts));
       })
       .catch(() => {
         res.status(400).json({ error: 'Invalid request.' });
@@ -33,5 +40,5 @@ export default function handler(req, res) {
     return;
   }
 
-  res.status(404).json({ error: 'API route not found.' });
+  res.status(405).json({ error: 'Method not allowed.' });
 }

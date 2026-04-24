@@ -1,9 +1,9 @@
 import {
-  addOrder,
-  getOrders,
+  getContent,
   handleOptions,
   readJsonBody,
   requireAdmin,
+  setContent,
   setCorsHeaders,
 } from './_lib/state.js';
 
@@ -15,17 +15,18 @@ export default function handler(req, res) {
   setCorsHeaders(res);
 
   if (req.method === 'GET') {
-    if (!requireAdmin(req, res)) {
-      return;
-    }
-    res.status(200).json(getOrders());
+    res.status(200).json(getContent());
     return;
   }
 
-  if (req.method === 'POST') {
+  if (req.method === 'PUT') {
+    if (!requireAdmin(req, res)) {
+      return;
+    }
+
     readJsonBody(req)
       .then((body) => {
-        res.status(201).json(addOrder(body));
+        res.status(200).json(setContent(body));
       })
       .catch(() => {
         res.status(400).json({ error: 'Invalid request.' });
@@ -33,5 +34,5 @@ export default function handler(req, res) {
     return;
   }
 
-  res.status(404).json({ error: 'API route not found.' });
+  res.status(405).json({ error: 'Method not allowed.' });
 }
