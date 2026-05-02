@@ -58,11 +58,6 @@ function readContent() {
   }
 }
 
-function hasStoredContent() {
-  if (typeof window === 'undefined') return false;
-  return Boolean(window.localStorage.getItem(CONTENT_STORAGE_KEY));
-}
-
 function uniqueCategorySummary(products) {
   const grouped = products.reduce((accumulator, product) => {
     const current = accumulator.get(product.category) ?? 0;
@@ -82,7 +77,6 @@ export function ContentProvider({ children }) {
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(() => Boolean(api.getAdminToken()));
   const [contentStatus, setContentStatus] = useState('Loading storefront content.');
   const [isBackendHydrated, setIsBackendHydrated] = useState(false);
-  const hasStoredContentRef = useRef(hasStoredContent());
   const hasUnsavedAdminEditRef = useRef(false);
 
   const markAdminEdit = () => {
@@ -96,10 +90,6 @@ export function ContentProvider({ children }) {
       .getContent()
       .then((serverContent) => {
         if (cancelled) return;
-        if (hasStoredContentRef.current) {
-          setContentStatus('Loaded saved browser edits. Backend sync will keep them permanent after login.');
-          return;
-        }
 
         setContent((current) => mergeContentWithDefaults({ ...current, ...serverContent }));
         setContentStatus('Connected to backend content API.');
