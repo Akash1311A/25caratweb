@@ -5,7 +5,7 @@ import {
   setCorsHeaders,
 } from '../_lib/state.js';
 
-export default function handler(req, res) {
+export default async function handler(req, res) {
   if (handleOptions(req, res)) {
     return;
   }
@@ -22,5 +22,5 @@ export default function handler(req, res) {
   }
 
   const enquiryId = decodeURIComponent(req.query.id);
-  res.status(200).json(removeEnquiry(enquiryId));
+  res.status(200).json(await removeEnquiry(enquiryId));
 }

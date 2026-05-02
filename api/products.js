@@ -7,7 +7,7 @@ import {
   setProducts,
 } from './_lib/state.js';
 
-export default function handler(req, res) {
+export default async function handler(req, res) {
   if (handleOptions(req, res)) {
     return;
   }
@@ -15,7 +15,7 @@ export default function handler(req, res) {
   setCorsHeaders(res);
 
   if (req.method === 'GET') {
-    res.status(200).json(getProducts());
+    res.status(200).json(await getProducts());
     return;
   }
 
@@ -24,19 +24,18 @@ export default function handler(req, res) {
       return;
     }
 
-    readJsonBody(req)
-      .then((body) => {
-        const nextProducts = Array.isArray(body) ? body : body.products;
-        if (!Array.isArray(nextProducts)) {
-          res.status(400).json({ error: 'Products array is required.' });
-          return;
-        }
+    try {
+      const body = await readJsonBody(req);
+      const nextProducts = Array.isArray(body) ? body : body.products;
+      if (!Array.isArray(nextProducts)) {
+        res.status(400).json({ error: 'Products array is required.' });
+        return;
+      }
 
-        res.status(200).json(setProducts(nextProducts));
-      })
-      .catch(() => {
-        res.status(400).json({ error: 'Invalid request.' });
-      });
+      res.status(200).json(await setProducts(nextProducts));
+    } catch (error) {
+      res.status(400).json({ error: error?.message || 'Invalid request.' });
+    }
     return;
   }
 

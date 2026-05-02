@@ -1,6 +1,8 @@
 node_modules/
 dist/
 data/*.json
+!data/store.json
+data/backups/
 
 .env
 .env.*

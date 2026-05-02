@@ -6,7 +6,7 @@ import {
   updateOrderStatus,
 } from '../../_lib/state.js';
 
-export default function handler(req, res) {
+export default async function handler(req, res) {
   if (handleOptions(req, res)) {
     return;
   }
@@ -22,12 +22,11 @@ export default function handler(req, res) {
     return;
   }
 
-  readJsonBody(req)
-    .then((body) => {
-      const orderId = decodeURIComponent(req.query.id);
-      res.status(200).json(updateOrderStatus(orderId, body.status));
-    })
-    .catch(() => {
-      res.status(400).json({ error: 'Invalid request.' });
-    });
+  try {
+    const body = await readJsonBody(req);
+    const orderId = decodeURIComponent(req.query.id);
+    res.status(200).json(await updateOrderStatus(orderId, body.status));
+  } catch (error) {
+    res.status(400).json({ error: error?.message || 'Invalid request.' });
+  }
 }

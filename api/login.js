@@ -6,7 +6,7 @@ import {
   verifyAdminCredentials,
 } from './_lib/state.js';
 
-export default function handler(req, res) {
+export default async function handler(req, res) {
   if (handleOptions(req, res)) {
     return;
   }
@@ -18,19 +18,18 @@ export default function handler(req, res) {
     return;
   }
 
-  readJsonBody(req)
-    .then((body) => {
-      if (!verifyAdminCredentials(body.email, body.password)) {
-        res.status(401).json({ error: 'Invalid admin credentials.' });
-        return;
-      }
+  try {
+    const body = await readJsonBody(req);
+    if (!(await verifyAdminCredentials(body.email, body.password))) {
+      res.status(401).json({ error: 'Invalid admin credentials.' });
+      return;
+    }
 
-      res.status(200).json({
-        token: createToken(body.email),
-        email: body.email,
-      });
-    })
-    .catch(() => {
-      res.status(400).json({ error: 'Invalid request.' });
+    res.status(200).json({
+      token: createToken(body.email),
+      email: body.email,
     });
+  } catch (error) {
+    res.status(400).json({ error: error?.message || 'Invalid request.' });
+  }
 }

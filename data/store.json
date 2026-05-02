@@ -1,0 +1,425 @@
+{
+  "content": {
+    "products": [
+      {
+        "id": 1,
+        "name": "Maharani Kundan Bridal Choker",
+        "description": "A sculpted bridal statement finished with refined Kundan work and luminous stone detailing. Designed to frame the neckline with regal presence, it brings together heritage artistry and a polished contemporary finish.",
+        "price": 2499,
+        "originalPrice": 3999,
+        "category": "Chokers",
+        "collection": "Bridal Signature",
+        "colors": [
+          "Silver"
+        ],
+        "badge": "Bridal Bestseller",
+        "image": "https://i.etsystatic.com/54460955/r/il/272826/7698085843/il_1588xN.7698085843_osyy.jpg",
+        "images": [
+          "https://i.etsystatic.com/54460955/r/il/272826/7698085843/il_1588xN.7698085843_osyy.jpg"
+        ],
+        "inStock": true,
+        "rating": 5,
+        "reviews": 47,
+        "stockCount": 18,
+        "imageWidth": 600,
+        "imageHeight": 800
+      },
+      {
+        "id": 2,
+        "name": "Temple Crest  Haar",
+        "description": "An ornate long necklace inspired by temple silhouettes and sacred motifs. Its layered composition and antique-inspired polish create a powerful look for weddings, rituals, and festive ceremonies.",
+        "price": 4999,
+        "originalPrice": 7999,
+        "category": "Long Set",
+        "collection": "Temple Heritage",
+        "colors": [
+          "Gold"
+        ],
+        "badge": "Signature Craft",
+        "image": "https://i.etsystatic.com/54460955/r/il/e0350f/7866474492/il_1588xN.7866474492_ke3i.jpg",
+        "images": [
+          "https://i.etsystatic.com/54460955/r/il/e0350f/7866474492/il_1588xN.7866474492_ke3i.jpg"
+        ],
+        "inStock": true,
+        "rating": 5,
+        "reviews": 89,
+        "stockCount": 12,
+        "imageWidth": 600,
+        "imageHeight": 800,
+        "imageDisplayHeight": 1
+      },
+      {
+        "id": 3,
+        "name": "Celestial Pearl Hasli",
+        "description": "A graceful hasli composed to deliver understated luxury. The pearl finish softens the silhouette, making it ideal for refined evening styling and elegant celebration wear.",
+        "price": 1599,
+        "originalPrice": 2499,
+        "category": "Hasli",
+        "collection": "Modern Heirloom",
+        "colors": [
+          "Silver",
+          "Pearl"
+        ],
+        "badge": "Evening Edit",
+        "image": "https://i.etsystatic.com/54460955/r/il/b06a2d/7966916359/il_1588xN.7966916359_462u.jpg",
+        "images": [
+          "https://i.etsystatic.com/54460955/r/il/f197d6/7918963088/il_1588xN.7918963088_tolq.jpghttps://i.etsystatic.com/54460955/r/il/495331/7918963130/il_1588xN.7918963130_szbv.jpghttps://i.etsystatic.com/54460955/r/il/b06a2d/7966916359/il_1588xN.7966916359_462u.jpg"
+        ],
+        "inStock": true,
+        "rating": 4,
+        "reviews": 32,
+        "stockCount": 24,
+        "imageWidth": 600,
+        "imageHeight": 800
+      },
+      {
+        "id": 4,
+        "name": "Golden Aura Necklace Set",
+        "description": "A polished 1 gram gold look set crafted to capture light with every movement. Its clean detailing and graceful finish make it a versatile choice for celebratory dressing.",
+        "price": 899,
+        "originalPrice": 1499,
+        "category": "Necklaces",
+        "collection": "Gold Radiance",
+        "colors": [
+          "Gold"
+        ],
+        "badge": "Top Seller",
+        "image": "https://i.etsystatic.com/54460955/r/il/aee9cf/7892922997/il_1588xN.7892922997_58no.jpg",
+        "images": [
+          "https://i.etsystatic.com/54460955/r/il/43252e/7702384551/il_1588xN.7702384551_km8g.jpghttps://i.etsystatic.com/54460955/r/il/99848b/7654439752/il_1588xN.7654439752_tguw.jpghttps://i.etsystatic.com/54460955/r/il/9bf332/7702383157/il_1588xN.7702383157_q463.jpg"
+        ],
+        "inStock": true,
+        "rating": 5,
+        "reviews": 156,
+        "stockCount": 30,
+        "imageWidth": 600,
+        "imageHeight": 800
+      },
+      {
+        "id": 5,
+        "name": "Rajwadi Copper Heritage Set",
+        "description": "A royal-inspired set with antique copper tones and rich handcrafted character. It delivers a distinguished vintage mood while remaining light and elegant for long wear.",
+        "price": 1299,
+        "originalPrice": 1999,
+        "category": "Short Sets",
+        "collection": "Rajwadi Heritage",
+        "colors": [
+          "Copper",
+          "Gold"
+        ],
+        "badge": "New Arrival",
+        "image": "https://i.etsystatic.com/54460955/r/il/49a000/7858664995/il_600x600.7858664995_rvlg.jpg",
+        "images": [
+          "https://i.etsystatic.com/54460955/r/il/45e4d9/7858664991/il_1588xN.7858664991_90vs.jpghttps://i.etsystatic.com/54460955/r/il/b0f23d/7858664999/il_1588xN.7858664999_4tqp.jpghttps://i.etsystatic.com/54460955/r/il/b8c783/7810722910/il_1588xN.7810722910_n811.jpg"
+        ],
+        "inStock": true,
+        "rating": 4,
+        "reviews": 73,
+        "stockCount": 16,
+        "imageWidth": 600,
+        "imageHeight": 800
+      },
+      {
+        "id": 8,
+        "name": "Graceful Jhumki Drops",
+        "description": "A classic silhouette reimagined with a more refined, fluid finish. The movement feels festive and feminine, making it an effortless choice for intimate gatherings and celebrations.",
+        "price": 699,
+        "originalPrice": 999,
+        "category": "Jhumki",
+        "collection": "Festive Edit",
+        "colors": [
+          "Gold",
+          "Silver"
+        ],
+        "badge": "Gift Pick",
+        "image": "https://i.etsystatic.com/54460955/r/il/a59c60/7821871396/il_1588xN.7821871396_qg5d.jpg",
+        "images": [
+          "https://i.etsystatic.com/54460955/r/il/b8c783/7810722910/il_1588xN.7810722910_n811.jpghttps://i.etsystatic.com/54460955/r/il/a59c60/7821871396/il_1588xN.7821871396_qg5d.jpghttps://i.etsystatic.com/54460955/r/il/6a4f2d/7821871370/il_1588xN.7821871370_4o33.jpg"
+        ],
+        "inStock": true,
+        "rating": 4,
+        "reviews": 118,
+        "stockCount": 35,
+        "imageWidth": 600,
+        "imageHeight": 800
+      },
+      {
+        "id": 9,
+        "name": "Regal Bracelet Set",
+        "description": "A polished bracelet pairing with a luminous finish and carefully proportioned detailing. It brings a subtle but unmistakably premium shine to day-to-night styling.",
+        "price": 1199,
+        "originalPrice": 1799,
+        "category": "Bracelets",
+        "collection": "Evening Luxe",
+        "colors": [
+          "Gold",
+          "Silver"
+        ],
+        "badge": "Limited Edit",
+        "image": "https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=600&h=800&fit=crop",
+        "images": [
+          "https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=600&h=800&fit=crop",
+          "https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=600&h=800&fit=crop"
+        ],
+        "inStock": true,
+        "rating": 5,
+        "reviews": 45,
+        "stockCount": 21,
+        "imageWidth": 600,
+        "imageHeight": 800
+      }
+    ],
+    "categories": [
+      {
+        "name": "Chokers",
+        "count": 1,
+        "icon": "diamond"
+      },
+      {
+        "name": "Long Set",
+        "count": 1,
+        "icon": "sparkles"
+      },
+      {
+        "name": "Hasli",
+        "count": 1,
+        "icon": "circle"
+      },
+      {
+        "name": "Necklaces",
+        "count": 1,
+        "icon": "gem"
+      },
+      {
+        "name": "Short Sets",
+        "count": 1,
+        "icon": "hexagon"
+      },
+      {
+        "name": "Jhumki",
+        "count": 1,
+        "icon": "star"
+      },
+      {
+        "name": "Bracelets",
+        "count": 1,
+        "icon": "feather"
+      }
+    ],
+    "collections": [
+      {
+        "name": "Bridal Signature",
+        "description": "Elevated bridal pieces with heirloom presence",
+        "image": "https://i.etsystatic.com/54460955/r/il/508c82/7892804363/il_600x600.7892804363_58ug.jpg"
+      },
+      {
+        "name": "Festive Edit",
+        "description": "Polished styles for celebrations and ceremonies",
+        "image": "https://i.etsystatic.com/54460955/r/il/d0f6fa/7676419017/il_600x600.7676419017_myl9.jpg"
+      },
+      {
+        "name": "Modern Heirloom",
+        "description": "Quiet luxury for everyday refinement",
+        "image": "https://i.etsystatic.com/54460955/r/il/53c867/7701654422/il_1588xN.7701654422_mkua.jpg"
+      },
+      {
+        "name": "Evening Luxe",
+        "description": "Statement shine for standout moments",
+        "image": "https://i.etsystatic.com/54460955/r/il/5bb506/7583233408/il_1588xN.7583233408_qj66.jpg"
+      }
+    ],
+    "reviews": [
+      {
+        "id": 1,
+        "name": "Nitin Kumar",
+        "rating": 5,
+        "text": "A refined shopping experience from start to finish. The pieces feel premium, the finishing is elegant, and the service feels genuinely personal.",
+        "location": "Delhi",
+        "date": "2024-12-15",
+        "verified": true
+      },
+      {
+        "id": 2,
+        "name": "Rakesh Kushwah",
+        "rating": 5,
+        "text": "The collection has a strong luxury feel without losing affordability. Every piece I ordered arrived exactly as expected and looked beautifully finished.",
+        "location": "Mumbai",
+        "date": "2024-12-10",
+        "verified": true
+      },
+      {
+        "id": 3,
+        "name": "Varun Kumar",
+        "rating": 5,
+        "text": "Exceptional quality and elegant presentation. The bridal look I bought felt premium and received multiple compliments at the event.",
+        "location": "Jaipur",
+        "date": "2024-12-05",
+        "verified": true
+      },
+      {
+        "id": 4,
+        "name": "Priya Sharma",
+        "rating": 5,
+        "text": "My necklace arrived beautifully packed and looked even better in person. The brand has a polished, trustworthy feel that makes ordering easy.",
+        "location": "Bangalore",
+        "date": "2024-11-28",
+        "verified": true
+      },
+      {
+        "id": 5,
+        "name": "Anjali Patel",
+        "rating": 4,
+        "text": "Sophisticated designs, strong finish, and great value. The temple-inspired styles are especially impressive.",
+        "location": "Ahmedabad",
+        "date": "2024-11-20",
+        "verified": true
+      }
+    ],
+    "topSellerIds": [
+      4,
+      1,
+      7,
+      6,
+      12,
+      9
+    ],
+    "brandInfo": {
+      "name": "25 carat ",
+      "tagline": "Elegance That Defines You",
+      "description": "Jai Shree Fashion Pvt Ltd curates premium artificial jewellery with a focus on craftsmanship, trust, and timeless beauty. From bridal statements to festive essentials, each piece is selected to feel graceful, polished, and memorable.",
+      "story": "Built on decades of trust in Sadar Bazar, Delhi, Jai Shree Fashion has grown by pairing traditional artistry with a modern premium experience. Our promise is simple: elegant designs, careful finishing, and service that makes every customer feel valued.",
+      "highlights": [
+        "40+ Years of Trust",
+        "Premium Bridal and Festive Styling",
+        "Private Consultation Support",
+        "Fast Dispatch and Secure Checkout"
+      ],
+      "address": "5137/38, Rui Mandi, Sadar Bazar, Delhi - 110006",
+      "phone": "+91 8729959880",
+      "email": "info@jaishreefashion.com",
+      "instagram": "jaishreefashion",
+      "youtube": "https://www.youtube.com/@jaishreefashion",
+      "googleRating": 4.8,
+      "totalReviews": 500,
+      "paymentInstructions": "Prepaid orders are confirmed after payment verification. For card payments, only masked details are shown to customers and sensitive card data is never stored in this app.",
+      "paymentMethods": [
+        {
+          "id": "upi-primary",
+          "type": "upi",
+          "label": "Primary UPI",
+          "provider": "Google Pay / PhonePe / Paytm",
+          "upiId": "payments@25carat",
+          "note": "Use this UPI ID for instant prepaid orders."
+        },
+        {
+          "id": "card-visa-demo",
+          "type": "card",
+          "cardType": "credit",
+          "label": "Visa Credit Card",
+          "holderName": "Jai Shree Fashion Pvt Ltd",
+          "cardLast4": "4242",
+          "expiry": "12/28",
+          "issuer": "HDFC Bank",
+          "note": "Accepted for prepaid luxury orders."
+        },
+        {
+          "id": "card-rupay-demo",
+          "type": "card",
+          "cardType": "debit",
+          "label": "RuPay Debit Card",
+          "holderName": "Jai Shree Fashion Pvt Ltd",
+          "cardLast4": "2718",
+          "expiry": "08/27",
+          "issuer": "State Bank of India",
+          "note": "Customers can pay using their RuPay-enabled debit card."
+        }
+      ]
+    },
+    "adminStats": [
+      {
+        "label": "Revenue",
+        "value": "₹24.8L",
+        "trend": "+18%"
+      },
+      {
+        "label": "Orders",
+        "value": "1,284",
+        "trend": "+12%"
+      },
+      {
+        "label": "Conversion",
+        "value": "4.9%",
+        "trend": "+0.8%"
+      },
+      {
+        "label": "Repeat Buyers",
+        "value": "38%",
+        "trend": "+6%"
+      }
+    ],
+    "orderTimeline": [
+      {
+        "id": "#JF-1042",
+        "customer": "Priya Sharma",
+        "status": "Packed",
+        "total": "₹4,980"
+      },
+      {
+        "id": "#JF-1041",
+        "customer": "Anjali Patel",
+        "status": "In Transit",
+        "total": "₹2,199"
+      },
+      {
+        "id": "#JF-1040",
+        "customer": "Nitin Kumar",
+        "status": "Delivered",
+        "total": "₹6,450"
+      }
+    ],
+    "offerMessages": [
+      "Free shipping on prepaid orders above Rs. 2,999",
+      "Festive savings up to 40% on selected bridal pieces",
+      "New arrivals added weekly for bridal and occasion wear"
+    ],
+    "homeContent": {
+      "heroBadge": "Limited-time offers and new drops",
+      "heroImage": "/uploads/image-1777708088658-09sqhj.png",
+      "heroImages": [
+        "/uploads/image-1777708088658-09sqhj.png",
+        "/uploads/image-1777708095589-f8wrkr.png",
+        "/uploads/image-1777705211876-nm28x2.png",
+        "/uploads/image-1777708112576-xufo56.png"
+      ],
+      "heroTitle": "Exquisite Collections In Gold",
+      "heroSubtitle": "Discover timeless elegance and exquisite craftsmanship. Each piece tells a story of luxury and grace.",
+      "heroPrimaryCta": "Explore Collections",
+      "heroSecondaryCta": "Our Story",
+      "featuredCollectionsLabel": "Featured Collections",
+      "featuredCollectionsTitle": "Curated for grand occasions",
+      "signatureLabel": "Signature Selection",
+      "signatureTitle": "Client favourites",
+      "brandPromiseLabel": "Brand Promise",
+      "brandPromiseTitle": "Luxury with trust, warmth, and precision",
+      "galleryLabel": "Instagram Gallery",
+      "galleryTitle": "Styled for the spotlight",
+      "videosLabel": "Watch Our Collection",
+      "videosTitle": "Exquisite Artificial Jewellery",
+      "offerLabel": "Festive Offer",
+      "offerTitle": "Celebrate in style with exclusive savings",
+      "offerDescription": "Up to 40% off on selected bridal and festive pieces, with premium packaging included."
+    }
+  },
+  "orders": [],
+  "enquiries": [],
+  "admins": [
+    {
+      "id": "admin-default",
+      "name": "Primary Admin",
+      "email": "admin@25carat.local",
+      "passwordHash": "jfPPrcMywZExh-dCssgDUw2Od8Qr61vnZ1iZtoEMr1Y",
+      "role": "owner",
+      "createdAt": "2026-05-01T00:00:00.000Z"
+    }
+  ]
+}

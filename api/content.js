@@ -7,7 +7,7 @@ import {
   setCorsHeaders,
 } from './_lib/state.js';
 
-export default function handler(req, res) {
+export default async function handler(req, res) {
   if (handleOptions(req, res)) {
     return;
   }
@@ -15,7 +15,7 @@ export default function handler(req, res) {
   setCorsHeaders(res);
 
   if (req.method === 'GET') {
-    res.status(200).json(getContent());
+    res.status(200).json(await getContent());
     return;
   }
 
@@ -24,13 +24,12 @@ export default function handler(req, res) {
       return;
     }
 
-    readJsonBody(req)
-      .then((body) => {
-        res.status(200).json(setContent(body));
-      })
-      .catch(() => {
-        res.status(400).json({ error: 'Invalid request.' });
-      });
+    try {
+      const body = await readJsonBody(req);
+      res.status(200).json(await setContent(body));
+    } catch (error) {
+      res.status(400).json({ error: error?.message || 'Invalid request.' });
+    }
     return;
   }
 
