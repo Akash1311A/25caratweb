@@ -1,14 +1,16 @@
 import { spawn } from 'node:child_process';
 
+const isWindows = process.platform === 'win32';
+
 const commands = [
   ['api', 'node', ['server/index.js']],
-  ['web', 'npm.cmd', ['run', 'dev']],
+  ['web', isWindows ? 'npm.cmd' : 'npm', ['run', 'dev']],
 ];
 
 const children = commands.map(([name, command, args]) => {
   const child = spawn(command, args, {
     stdio: ['ignore', 'pipe', 'pipe'],
-    shell: false,
+    shell: isWindows,
   });
 
   child.stdout.on('data', (chunk) => process.stdout.write(`[${name}] ${chunk}`));

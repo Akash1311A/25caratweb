@@ -30,6 +30,21 @@ const defaultContent = {
 
 const ContentContext = createContext(null);
 
+function mergeContentWithDefaults(value = {}) {
+  return {
+    ...defaultContent,
+    ...value,
+    brandInfo: {
+      ...defaultBrandInfo,
+      ...(value.brandInfo || {}),
+    },
+    homeContent: {
+      ...defaultHomeContent,
+      ...(value.homeContent || {}),
+    },
+  };
+}
+
 function readContent() {
   if (typeof window === 'undefined') return defaultContent;
 
@@ -37,13 +52,15 @@ function readContent() {
     const raw = window.localStorage.getItem(CONTENT_STORAGE_KEY);
     if (!raw) return defaultContent;
 
-    return {
-      ...defaultContent,
-      ...JSON.parse(raw),
-    };
+    return mergeContentWithDefaults(JSON.parse(raw));
   } catch {
     return defaultContent;
   }
+}
+
+function hasStoredContent() {
+  if (typeof window === 'undefined') return false;
+  return Boolean(window.localStorage.getItem(CONTENT_STORAGE_KEY));
 }
 
 function uniqueCategorySummary(products) {
@@ -64,7 +81,13 @@ export function ContentProvider({ children }) {
   const [content, setContent] = useState(readContent);
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(() => Boolean(api.getAdminToken()));
   const [contentStatus, setContentStatus] = useState('Loading storefront content.');
-  const hydratedRef = useRef(false);
+  const [isBackendHydrated, setIsBackendHydrated] = useState(false);
+  const hasStoredContentRef = useRef(hasStoredContent());
+  const hasUnsavedAdminEditRef = useRef(false);
+
+  const markAdminEdit = () => {
+    hasUnsavedAdminEditRef.current = true;
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -73,7 +96,12 @@ export function ContentProvider({ children }) {
       .getContent()
       .then((serverContent) => {
         if (cancelled) return;
-        setContent((current) => ({ ...current, ...serverContent }));
+        if (hasStoredContentRef.current) {
+          setContentStatus('Loaded saved browser edits. Backend sync will keep them permanent after login.');
+          return;
+        }
+
+        setContent((current) => mergeContentWithDefaults({ ...current, ...serverContent }));
         setContentStatus('Connected to backend content API.');
       })
       .catch(() => {
@@ -81,7 +109,9 @@ export function ContentProvider({ children }) {
         setContentStatus('Using browser fallback content. Start API server for shared data.');
       })
       .finally(() => {
-        hydratedRef.current = true;
+        if (!cancelled) {
+          setIsBackendHydrated(true);
+        }
       });
 
     return () => {
@@ -90,24 +120,45 @@ export function ContentProvider({ children }) {
   }, []);
 
   useEffect(() => {
+    const token = api.getAdminToken();
+    if (!token) return;
+
+    api
+      .validateAdminSession()
+      .then(() => {
+        setIsAdminAuthenticated(true);
+      })
+      .catch(() => {
+        api.clearAdminToken();
+        setIsAdminAuthenticated(false);
+        setContentStatus('Admin session expired. Please login again.');
+      });
+  }, []);
+
+  useEffect(() => {
     if (typeof window === 'undefined') return;
     window.localStorage.setItem(CONTENT_STORAGE_KEY, JSON.stringify(content));
   }, [content]);
 
   useEffect(() => {
-    if (!hydratedRef.current || !isAdminAuthenticated) return undefined;
+    if (!isBackendHydrated || !isAdminAuthenticated) return undefined;
+    if (!hasUnsavedAdminEditRef.current) return undefined;
 
     const timeout = window.setTimeout(() => {
       api
         .saveContent(content)
-        .then(() => setContentStatus('Saved to backend database.'))
+        .then(() => {
+          hasUnsavedAdminEditRef.current = false;
+          setContentStatus('Saved to backend database.');
+        })
         .catch((error) => setContentStatus(error.message || 'Backend save failed.'));
     }, 450);
 
     return () => window.clearTimeout(timeout);
-  }, [content, isAdminAuthenticated]);
+  }, [content, isAdminAuthenticated, isBackendHydrated]);
 
   const setBrandInfo = (updater) => {
+    markAdminEdit();
     setContent((current) => ({
       ...current,
       brandInfo: typeof updater === 'function' ? updater(current.brandInfo) : updater,
@@ -115,6 +166,7 @@ export function ContentProvider({ children }) {
   };
 
   const setHomeContent = (updater) => {
+    markAdminEdit();
     setContent((current) => ({
       ...current,
       homeContent: typeof updater === 'function' ? updater(current.homeContent) : updater,
@@ -122,6 +174,7 @@ export function ContentProvider({ children }) {
   };
 
   const setOfferMessages = (messages) => {
+    markAdminEdit();
     setContent((current) => ({
       ...current,
       offerMessages: messages,
@@ -129,6 +182,7 @@ export function ContentProvider({ children }) {
   };
 
   const setProducts = (updater) => {
+    markAdminEdit();
     setContent((current) => {
       const nextProducts = typeof updater === 'function' ? updater(current.products) : updater;
       return {
@@ -140,6 +194,7 @@ export function ContentProvider({ children }) {
   };
 
   const setCollections = (updater) => {
+    markAdminEdit();
     setContent((current) => ({
       ...current,
       collections: typeof updater === 'function' ? updater(current.collections) : updater,
@@ -147,6 +202,7 @@ export function ContentProvider({ children }) {
   };
 
   const setReviews = (updater) => {
+    markAdminEdit();
     setContent((current) => ({
       ...current,
       reviews: typeof updater === 'function' ? updater(current.reviews) : updater,
@@ -154,6 +210,7 @@ export function ContentProvider({ children }) {
   };
 
   const resetContent = () => {
+    markAdminEdit();
     setContent(defaultContent);
 
     if (typeof window !== 'undefined') {
@@ -164,6 +221,7 @@ export function ContentProvider({ children }) {
   const adminLogin = async (email, password) => {
     const result = await api.login(email, password);
     api.saveAdminToken(result.token);
+    markAdminEdit();
     setIsAdminAuthenticated(true);
     setContentStatus('Admin login successful. Backend saves enabled.');
     return result;

@@ -111,10 +111,10 @@ export default function Product() {
       </div>
 
       <div className="mx-auto max-w-7xl px-4 pb-32 sm:px-6 sm:pb-24 lg:px-8">
-        <div className="grid gap-10 lg:grid-cols-[1fr_0.95fr]">
+        <div className="grid gap-6 lg:gap-10 lg:grid-cols-[1fr_0.95fr]">
           <div>
             <div
-              className="group relative overflow-hidden rounded-[2rem] border border-[#5b2ca0]/12 bg-[#FFFFFF]"
+              className="group relative overflow-hidden rounded-[1.6rem] border border-[#5b2ca0]/12 bg-[#FFFFFF] sm:rounded-[2rem]"
               onTouchStart={(event) => setTouchStartX(event.touches[0].clientX)}
               onTouchEnd={(event) => {
                 if (touchStartX === null) return;
@@ -143,14 +143,14 @@ export default function Product() {
                   />
                 ))}
               </div>
-              <div className="absolute left-4 top-4 rounded-full bg-gradient-to-r from-[#5b2ca0] to-[#8d58d6] px-4 py-2 text-sm font-bold tracking-[0.14em] text-white shadow-lg">
+              <div className="absolute left-3 top-3 rounded-full bg-gradient-to-r from-[#5b2ca0] to-[#8d58d6] px-3 py-1.5 text-[0.7rem] font-bold tracking-[0.14em] text-white shadow-lg sm:left-4 sm:top-4 sm:px-4 sm:py-2 sm:text-sm">
                 {discountPercent}% OFF
               </div>
               <button
                 type="button"
                 aria-label="Previous image"
                 onClick={() => goToSlide(-1)}
-                className="absolute left-4 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-white/30 bg-white/18 text-white backdrop-blur-md transition hover:bg-white hover:text-[#2f124d]"
+                className="absolute left-3 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/30 bg-white/18 text-white backdrop-blur-md transition hover:bg-white hover:text-[#2f124d] sm:left-4 sm:h-11 sm:w-11"
               >
                 <ChevronLeft size={20} />
               </button>
@@ -158,12 +158,12 @@ export default function Product() {
                 type="button"
                 aria-label="Next image"
                 onClick={() => goToSlide(1)}
-                className="absolute right-4 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-white/30 bg-white/18 text-white backdrop-blur-md transition hover:bg-white hover:text-[#2f124d]"
+                className="absolute right-3 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/30 bg-white/18 text-white backdrop-blur-md transition hover:bg-white hover:text-[#2f124d] sm:right-4 sm:h-11 sm:w-11"
               >
                 <ChevronRight size={20} />
               </button>
             </div>
-            <div className="mt-4 grid grid-cols-4 gap-3">
+            <div className="mt-4 grid grid-cols-4 gap-2 sm:gap-3">
               {product.images.map((image, index) => (
                 <button
                   key={image}
@@ -257,7 +257,7 @@ export default function Product() {
               ))}
             </div>
 
-            <div className="mt-8 flex flex-wrap items-center gap-4">
+            <div className="mt-8 flex flex-wrap items-center gap-3 sm:gap-4">
               <div className="flex items-center rounded-full border border-[#5b2ca0]/18 bg-[#5b2ca0]/8">
                 <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="px-4 py-3 text-[#4B2C6F]">
                   <Minus size={16} />
@@ -267,7 +267,7 @@ export default function Product() {
                   <Plus size={16} />
                 </button>
               </div>
-              <button onClick={handleAddToCart} className="btn-premium flex flex-1 items-center justify-center gap-2 px-6 py-4">
+              <button onClick={handleAddToCart} className="btn-premium flex min-w-0 flex-1 basis-full items-center justify-center gap-2 px-6 py-4 sm:basis-auto">
                 <ShoppingBag size={18} /> Add to Cart
               </button>
               <button
@@ -276,7 +276,7 @@ export default function Product() {
                   addToCart(product.id, quantity);
                   window.location.href = '/checkout';
                 }}
-                className="flex h-14 items-center justify-center gap-2 rounded-full bg-[linear-gradient(135deg,#f2d58c,#d4af37)] px-6 font-semibold text-[#2f124d] shadow-[0_12px_28px_rgba(212,175,55,0.28)] transition hover:brightness-105"
+                className="flex h-14 min-w-0 flex-1 basis-full items-center justify-center gap-2 rounded-full bg-[linear-gradient(135deg,#f2d58c,#d4af37)] px-6 font-semibold text-[#2f124d] shadow-[0_12px_28px_rgba(212,175,55,0.28)] transition hover:brightness-105 sm:basis-auto"
               >
                 <Zap size={18} /> Buy Now
               </button>

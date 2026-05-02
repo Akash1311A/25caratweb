@@ -9,6 +9,7 @@ export const STORAGE_KEYS = {
   enquiries: 'twentyfivecarat-enquiries',
   profile: 'twentyfivecarat-customer-profile',
   recentViews: 'twentyfivecarat-recent-views',
+  paymentMethods: 'twentyfivecarat-payment-methods',
 };
 
 const defaultProfile = {
@@ -59,6 +60,7 @@ export function StoreProvider({ children }) {
   const [enquiries, setEnquiries] = useState(() => readStorage(STORAGE_KEYS.enquiries, []));
   const [profile, setProfile] = useState(() => readStorage(STORAGE_KEYS.profile, defaultProfile));
   const [recentViews, setRecentViews] = useState(() => readStorage(STORAGE_KEYS.recentViews, []));
+  const [savedPaymentMethods, setSavedPaymentMethods] = useState(() => readStorage(STORAGE_KEYS.paymentMethods, []));
 
   useEffect(() => writeStorage(STORAGE_KEYS.wishlist, wishlist), [wishlist]);
   useEffect(() => writeStorage(STORAGE_KEYS.cart, cart), [cart]);
@@ -66,6 +68,7 @@ export function StoreProvider({ children }) {
   useEffect(() => writeStorage(STORAGE_KEYS.enquiries, enquiries), [enquiries]);
   useEffect(() => writeStorage(STORAGE_KEYS.profile, profile), [profile]);
   useEffect(() => writeStorage(STORAGE_KEYS.recentViews, recentViews), [recentViews]);
+  useEffect(() => writeStorage(STORAGE_KEYS.paymentMethods, savedPaymentMethods), [savedPaymentMethods]);
 
   const refreshAdminRecords = async () => {
     const [serverOrders, serverEnquiries] = await Promise.all([
@@ -234,6 +237,29 @@ export function StoreProvider({ children }) {
     setProfile(defaultProfile);
   };
 
+  const addPaymentMethod = (payload) => {
+    const digits = String(payload.cardNumber || '').replace(/\D/g, '');
+    const nextMethod = {
+      id: `pm-${Date.now()}`,
+      type: 'card',
+      cardType: payload.cardType === 'debit' ? 'debit' : 'credit',
+      label: `${payload.network || 'Card'} ${payload.cardType === 'debit' ? 'Debit' : 'Credit'}`,
+      network: payload.network || 'Card',
+      holderName: String(payload.holderName || '').trim(),
+      cardLast4: digits.slice(-4),
+      expiry: String(payload.expiry || '').trim(),
+      note: String(payload.note || '').trim(),
+      addedAt: new Date().toISOString(),
+    };
+
+    setSavedPaymentMethods((current) => [nextMethod, ...current]);
+    return nextMethod;
+  };
+
+  const removePaymentMethod = (paymentMethodId) => {
+    setSavedPaymentMethods((current) => current.filter((item) => item.id !== paymentMethodId));
+  };
+
   const value = {
     wishlist,
     wishlistProducts,
@@ -246,6 +272,7 @@ export function StoreProvider({ children }) {
     profile,
     recentViews,
     recentViewedProducts,
+    savedPaymentMethods,
     setOrders,
     setEnquiries,
     toggleWishlist,
@@ -257,6 +284,8 @@ export function StoreProvider({ children }) {
     placeOrder,
     saveProfile,
     logoutProfile,
+    addPaymentMethod,
+    removePaymentMethod,
     recordRecentView,
     refreshAdminRecords,
     updateOrderStatus: async (orderId, status) => {

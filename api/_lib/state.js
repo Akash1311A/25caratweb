@@ -1,4 +1,6 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
+import { existsSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import {
   adminStats,
   brandInfo,
@@ -12,9 +14,10 @@ import {
   topSellerIds,
 } from '../../src/data/content.js';
 
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@25carat.local';
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
+const ADMIN_EMAIL = String(process.env.ADMIN_EMAIL || 'admin@25carat.local').trim().toLowerCase();
+const ADMIN_PASSWORD = String(process.env.ADMIN_PASSWORD || 'admin123').trim();
 const JWT_SECRET = process.env.JWT_SECRET || 'change-this-secret-before-deploy';
+const PASSWORD_SECRET = process.env.PASSWORD_SECRET || JWT_SECRET;
 const TOKEN_TTL_MS = 1000 * 60 * 60 * 24 * 7;
 
 const defaultContent = {
@@ -30,10 +33,70 @@ const defaultContent = {
   homeContent,
 };
 
+function readDeployedStore() {
+  const storePath = join(process.cwd(), 'data', 'store.json');
+  if (!existsSync(storePath)) return {};
+
+  try {
+    return JSON.parse(readFileSync(storePath, 'utf8'));
+  } catch {
+    return {};
+  }
+}
+
+function normalizeAdminEmail(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
+function hashPassword(password) {
+  return createHmac('sha256', PASSWORD_SECRET).update(String(password || '').trim()).digest('base64url');
+}
+
+function passwordsMatch(password, passwordHash) {
+  const expected = Buffer.from(String(passwordHash || ''));
+  const candidate = Buffer.from(hashPassword(password));
+  return expected.length === candidate.length && timingSafeEqual(expected, candidate);
+}
+
+function sanitizeAdminUser(admin) {
+  return {
+    id: admin.id,
+    name: admin.name,
+    email: admin.email,
+    role: admin.role || 'admin',
+    createdAt: admin.createdAt,
+  };
+}
+
+const deployedStore = readDeployedStore();
+const deployedContent = deployedStore.content || {};
+const defaultAdmins = [
+    {
+      id: 'admin-default',
+      name: 'Primary Admin',
+      email: normalizeAdminEmail(ADMIN_EMAIL),
+      passwordHash: hashPassword(ADMIN_PASSWORD),
+      role: 'owner',
+      createdAt: '2026-05-01T00:00:00.000Z',
+    },
+  ];
+
 const state = {
-  content: structuredClone(defaultContent),
-  orders: [],
-  enquiries: [],
+  content: structuredClone({
+    ...defaultContent,
+    ...deployedContent,
+    brandInfo: {
+      ...defaultContent.brandInfo,
+      ...(deployedContent.brandInfo || {}),
+    },
+    homeContent: {
+      ...defaultContent.homeContent,
+      ...(deployedContent.homeContent || {}),
+    },
+  }),
+  orders: Array.isArray(deployedStore.orders) ? deployedStore.orders : [],
+  enquiries: Array.isArray(deployedStore.enquiries) ? deployedStore.enquiries : [],
+  admins: Array.isArray(deployedStore.admins) && deployedStore.admins.length ? deployedStore.admins : defaultAdmins,
 };
 
 function base64url(value) {
@@ -50,7 +113,9 @@ export function createToken(email) {
 }
 
 export function verifyAdminCredentials(email, password) {
-  return email === ADMIN_EMAIL && password === ADMIN_PASSWORD;
+  return state.admins.some(
+    (admin) => admin.email === normalizeAdminEmail(email) && passwordsMatch(password, admin.passwordHash),
+  );
 }
 
 export function verifyToken(token) {
@@ -219,5 +284,48 @@ export function addEnquiry(payload) {
 
 export function removeEnquiry(enquiryId) {
   state.enquiries = state.enquiries.filter((entry) => entry.id !== enquiryId);
+  return { ok: true };
+}
+
+export function getAdminUsers() {
+  return state.admins.map(sanitizeAdminUser);
+}
+
+export function addAdminUser(payload) {
+  const email = normalizeAdminEmail(payload.email);
+  const password = String(payload.password || '').trim();
+
+  if (!payload.name || !email || !password) {
+    throw new Error('Name, email, and password are required.');
+  }
+
+  if (state.admins.some((admin) => admin.email === email)) {
+    throw new Error('An admin with this email already exists.');
+  }
+
+  const nextAdmin = {
+    id: `admin-${Date.now()}`,
+    name: String(payload.name).trim(),
+    email,
+    passwordHash: hashPassword(password),
+    role: payload.role === 'owner' ? 'owner' : 'admin',
+    createdAt: new Date().toISOString(),
+  };
+
+  state.admins = [nextAdmin, ...state.admins];
+  return sanitizeAdminUser(nextAdmin);
+}
+
+export function deleteAdminUser(adminId) {
+  if (state.admins.length <= 1) {
+    throw new Error('At least one admin account must remain.');
+  }
+
+  const exists = state.admins.some((admin) => admin.id === adminId);
+  if (!exists) {
+    throw new Error('Admin account not found.');
+  }
+
+  state.admins = state.admins.filter((admin) => admin.id !== adminId);
   return { ok: true };
 }

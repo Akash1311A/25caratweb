@@ -20,9 +20,11 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT || 4000);
 const DB_PATH = process.env.DB_PATH || join(__dirname, '..', 'data', 'store.json');
 const DIST_DIR = join(__dirname, '..', 'dist');
+const UPLOAD_DIR = join(__dirname, '..', 'public', 'uploads');
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@25carat.local';
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
 const JWT_SECRET = process.env.JWT_SECRET || 'change-this-secret-before-deploy';
+const PASSWORD_SECRET = process.env.PASSWORD_SECRET || JWT_SECRET;
 const TOKEN_TTL_MS = 1000 * 60 * 60 * 24 * 7;
 const SUPABASE_URL = process.env.SUPABASE_URL || '';
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
@@ -42,10 +44,46 @@ const defaultContent = {
   homeContent,
 };
 
+function normalizeAdminEmail(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
+function hashPassword(password) {
+  return createHmac('sha256', PASSWORD_SECRET).update(String(password || '').trim()).digest('base64url');
+}
+
+function passwordsMatch(password, passwordHash) {
+  const expected = Buffer.from(String(passwordHash || ''));
+  const candidate = Buffer.from(hashPassword(password));
+  return expected.length === candidate.length && timingSafeEqual(expected, candidate);
+}
+
+function sanitizeAdminUser(admin) {
+  return {
+    id: admin.id,
+    name: admin.name,
+    email: admin.email,
+    role: admin.role || 'admin',
+    createdAt: admin.createdAt,
+  };
+}
+
+function buildDefaultAdmin() {
+  return {
+    id: 'admin-default',
+    name: 'Primary Admin',
+    email: normalizeAdminEmail(ADMIN_EMAIL),
+    passwordHash: hashPassword(ADMIN_PASSWORD),
+    role: 'owner',
+    createdAt: '2026-05-01T00:00:00.000Z',
+  };
+}
+
 const defaultDb = {
   content: defaultContent,
   orders: [],
   enquiries: [],
+  admins: [buildDefaultAdmin()],
 };
 
 function jsonResponse(res, statusCode, payload) {
@@ -102,6 +140,105 @@ function parseJsonBody(req) {
   });
 }
 
+function parseMultipartBoundary(contentType) {
+  const match = String(contentType || '').match(/boundary=(?:"([^"]+)"|([^;]+))/i);
+  return match ? match[1] || match[2] : '';
+}
+
+function getUploadExtension(contentType, filename) {
+  const lowerName = String(filename || '').toLowerCase();
+  if (lowerName.endsWith('.png')) return '.png';
+  if (lowerName.endsWith('.webp')) return '.webp';
+  if (lowerName.endsWith('.gif')) return '.gif';
+  if (lowerName.endsWith('.svg')) return '.svg';
+  if (lowerName.endsWith('.jpg') || lowerName.endsWith('.jpeg')) return '.jpg';
+  if (contentType === 'image/png') return '.png';
+  if (contentType === 'image/webp') return '.webp';
+  if (contentType === 'image/gif') return '.gif';
+  if (contentType === 'image/svg+xml') return '.svg';
+  return '.jpg';
+}
+
+function parseMultipartFile(buffer, boundary) {
+  const boundaryText = `--${boundary}`;
+  const body = buffer.toString('binary');
+  const parts = body.split(boundaryText);
+
+  for (const part of parts) {
+    if (!part.includes('name="image"')) continue;
+
+    const headerEnd = part.indexOf('\r\n\r\n');
+    if (headerEnd === -1) continue;
+
+    const rawHeaders = part.slice(0, headerEnd);
+    const filename = rawHeaders.match(/filename="([^"]*)"/i)?.[1] || '';
+    const contentType = rawHeaders.match(/Content-Type:\s*([^\r\n]+)/i)?.[1]?.trim() || '';
+    let fileBody = part.slice(headerEnd + 4);
+
+    if (fileBody.endsWith('\r\n')) {
+      fileBody = fileBody.slice(0, -2);
+    }
+
+    return {
+      filename,
+      contentType,
+      buffer: Buffer.from(fileBody, 'binary'),
+    };
+  }
+
+  return null;
+}
+
+function readMultipartFile(req) {
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    let size = 0;
+    const maxSize = 10 * 1024 * 1024;
+
+    req.on('data', (chunk) => {
+      size += chunk.length;
+      if (size > maxSize) {
+        req.destroy();
+        reject(new Error('Image must be smaller than 10 MB.'));
+        return;
+      }
+      chunks.push(chunk);
+    });
+
+    req.on('end', () => {
+      const boundary = parseMultipartBoundary(req.headers['content-type']);
+      if (!boundary) {
+        reject(new Error('Invalid image upload.'));
+        return;
+      }
+
+      const file = parseMultipartFile(Buffer.concat(chunks), boundary);
+      if (!file?.buffer?.length || !file.contentType.startsWith('image/')) {
+        reject(new Error('Please upload a valid image file.'));
+        return;
+      }
+
+      resolve(file);
+    });
+
+    req.on('error', reject);
+  });
+}
+
+async function handleImageUpload(req, res) {
+  const file = await readMultipartFile(req);
+  const extension = getUploadExtension(file.contentType, file.filename);
+  const safeName = `image-${Date.now()}-${Math.random().toString(36).slice(2, 8)}${extension}`;
+
+  await mkdir(UPLOAD_DIR, { recursive: true });
+  await writeFile(join(UPLOAD_DIR, safeName), file.buffer);
+
+  jsonResponse(res, 201, {
+    url: `/uploads/${safeName}`,
+    filename: safeName,
+  });
+}
+
 function base64url(value) {
   return Buffer.from(value).toString('base64url');
 }
@@ -135,6 +272,17 @@ function verifyToken(token) {
   }
 }
 
+function decodeToken(token) {
+  if (!verifyToken(token)) return null;
+
+  try {
+    const [payload] = token.split('.');
+    return JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
+  } catch {
+    return null;
+  }
+}
+
 function requireAdmin(req, res) {
   const header = req.headers.authorization || '';
   const token = header.startsWith('Bearer ') ? header.slice(7) : '';
@@ -145,6 +293,14 @@ function requireAdmin(req, res) {
   }
 
   return true;
+}
+
+function getAuthenticatedAdmin(req, db) {
+  const header = req.headers.authorization || '';
+  const token = header.startsWith('Bearer ') ? header.slice(7) : '';
+  const payload = decodeToken(token);
+  if (!payload?.email) return null;
+  return (db.admins || []).find((admin) => admin.email === normalizeAdminEmail(payload.email)) || null;
 }
 
 async function readDb() {
@@ -171,6 +327,16 @@ async function readDb() {
       ...defaultContent,
       ...(saved.content || {}),
     },
+    admins: Array.isArray(saved.admins) && saved.admins.length
+      ? saved.admins.map((admin) => ({
+          id: admin.id || `admin-${Date.now()}`,
+          name: admin.name || 'Admin',
+          email: normalizeAdminEmail(admin.email),
+          passwordHash: admin.passwordHash || hashPassword(ADMIN_PASSWORD),
+          role: admin.role || 'admin',
+          createdAt: admin.createdAt || new Date().toISOString(),
+        }))
+      : [buildDefaultAdmin()],
   };
 }
 
@@ -185,6 +351,12 @@ async function writeDb(db) {
   }
 
   await mkdir(dirname(DB_PATH), { recursive: true });
+  if (existsSync(DB_PATH)) {
+    const backupDir = join(dirname(DB_PATH), 'backups');
+    const backupName = `store-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+    await mkdir(backupDir, { recursive: true });
+    await writeFile(join(backupDir, backupName), await readFile(DB_PATH, 'utf8'));
+  }
   await writeFile(DB_PATH, JSON.stringify(db, null, 2));
 }
 
@@ -293,18 +465,33 @@ async function routeRequest(req, res) {
       return;
     }
 
+    if (req.method === 'POST' && path === '/api/uploads') {
+      if (!requireAdmin(req, res)) return;
+      await handleImageUpload(req, res);
+      return;
+    }
+
+    const db = await readDb();
+
     if (req.method === 'POST' && (path === '/api/auth/login' || path === '/api/login')) {
       const body = await parseJsonBody(req);
-      if (body.email === ADMIN_EMAIL && body.password === ADMIN_PASSWORD) {
-        jsonResponse(res, 200, { token: createToken(body.email), email: body.email });
+      const admin = db.admins.find(
+        (entry) => entry.email === normalizeAdminEmail(body.email) && passwordsMatch(body.password, entry.passwordHash),
+      );
+
+      if (admin) {
+        jsonResponse(res, 200, {
+          token: createToken(admin.email),
+          email: admin.email,
+          name: admin.name,
+          role: admin.role,
+        });
         return;
       }
 
       jsonResponse(res, 401, { error: 'Invalid admin credentials.' });
       return;
     }
-
-    const db = await readDb();
 
     if (req.method === 'GET' && path === '/api/content') {
       jsonResponse(res, 200, db.content);
@@ -413,9 +600,98 @@ async function routeRequest(req, res) {
       return;
     }
 
+    if (req.method === 'GET' && path === '/api/admin/users') {
+      if (!requireAdmin(req, res)) return;
+      jsonResponse(res, 200, db.admins.map(sanitizeAdminUser));
+      return;
+    }
+
+    if (req.method === 'POST' && path === '/api/admin/users') {
+      if (!requireAdmin(req, res)) return;
+
+      const actor = getAuthenticatedAdmin(req, db);
+      if (!actor) {
+        jsonResponse(res, 401, { error: 'Admin login required.' });
+        return;
+      }
+
+      const body = await parseJsonBody(req);
+      const email = normalizeAdminEmail(body.email);
+      const password = String(body.password || '').trim();
+
+      if (!body.name || !email || !password) {
+        jsonResponse(res, 400, { error: 'Name, email, and password are required.' });
+        return;
+      }
+
+      if (db.admins.some((admin) => admin.email === email)) {
+        jsonResponse(res, 409, { error: 'An admin with this email already exists.' });
+        return;
+      }
+
+      const nextAdmin = {
+        id: `admin-${Date.now()}`,
+        name: String(body.name).trim(),
+        email,
+        passwordHash: hashPassword(password),
+        role: body.role === 'owner' ? 'owner' : 'admin',
+        createdAt: new Date().toISOString(),
+      };
+
+      const nextDb = {
+        ...db,
+        admins: [nextAdmin, ...db.admins],
+      };
+      await writeDb(nextDb);
+      jsonResponse(res, 201, sanitizeAdminUser(nextAdmin));
+      return;
+    }
+
+    const adminMatch = path.match(/^\/api\/admin\/users\/([^/]+)$/);
+    if (req.method === 'DELETE' && adminMatch) {
+      if (!requireAdmin(req, res)) return;
+
+      const actor = getAuthenticatedAdmin(req, db);
+      if (!actor) {
+        jsonResponse(res, 401, { error: 'Admin login required.' });
+        return;
+      }
+
+      const adminId = decodeURIComponent(adminMatch[1]);
+      const target = db.admins.find((admin) => admin.id === adminId);
+
+      if (!target) {
+        jsonResponse(res, 404, { error: 'Admin account not found.' });
+        return;
+      }
+
+      if (db.admins.length <= 1) {
+        jsonResponse(res, 400, { error: 'At least one admin account must remain.' });
+        return;
+      }
+
+      const nextDb = {
+        ...db,
+        admins: db.admins.filter((admin) => admin.id !== adminId),
+      };
+      await writeDb(nextDb);
+      jsonResponse(res, 200, { ok: true });
+      return;
+    }
+
     if (path.startsWith('/api')) {
       jsonResponse(res, 404, { error: 'API route not found.' });
       return;
+    }
+
+    if (path.startsWith('/uploads/')) {
+      const uploadName = path.replace(/^\/uploads\/+/, '').replace(/\.\./g, '');
+      const uploadPath = join(UPLOAD_DIR, uploadName);
+
+      if (existsSync(uploadPath)) {
+        await staticResponse(res, uploadPath);
+        return;
+      }
     }
 
     const requestedPath = path === '/' ? '/index.html' : path;

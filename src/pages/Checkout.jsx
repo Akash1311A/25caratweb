@@ -5,14 +5,59 @@ import { useStore } from '../context/StoreContext';
 import { useContent } from '../context/ContentContext';
 
 function formatPrice(value) {
-  return `₹${value.toLocaleString()}`;
+  return `Rs. ${Number(value || 0).toLocaleString('en-IN')}`;
+}
+
+function formatSavedCard(method) {
+  const kind = method.cardType === 'debit' ? 'Debit' : 'Credit';
+  const network = method.network || method.label || 'Card';
+  return `${network} ${kind} ending in ${method.cardLast4 || '----'}`;
 }
 
 export default function Checkout() {
   const [searchParams] = useSearchParams();
-  const { cartItemsDetailed, cartSubtotal, updateCartQuantity, removeFromCart, clearCart, placeOrder, storageKeys } = useStore();
-  const { products } = useContent();
-  const [paymentMode, setPaymentMode] = useState('upi');
+  const {
+    cartItemsDetailed,
+    cartSubtotal,
+    updateCartQuantity,
+    removeFromCart,
+    clearCart,
+    placeOrder,
+    storageKeys,
+    savedPaymentMethods,
+  } = useStore();
+  const { products, brandInfo } = useContent();
+  const acceptedPaymentMethods = Array.isArray(brandInfo.paymentMethods) ? brandInfo.paymentMethods : [];
+
+  const paymentOptions = useMemo(() => {
+    const savedCards = savedPaymentMethods.map((method) => ({
+      id: `saved-card:${method.id}`,
+      title: formatSavedCard(method),
+      subtitle: method.expiry ? `Expires ${method.expiry}` : 'Saved to your account',
+      icon: CreditCard,
+    }));
+
+    const accepted = acceptedPaymentMethods.map((method) => ({
+      id: method.type === 'card' ? `store-card:${method.id}` : `upi:${method.id}`,
+      title:
+        method.type === 'card'
+          ? `${method.label || 'Card'} ending in ${method.cardLast4 || '----'}`
+          : `${method.label || 'UPI'}${method.upiId ? ` • ${method.upiId}` : ''}`,
+      subtitle:
+        method.type === 'card'
+          ? `${method.cardType === 'debit' ? 'Debit' : 'Credit'}${method.issuer ? ` • ${method.issuer}` : ''}`
+          : method.provider || 'Scan or pay via UPI ID',
+      icon: method.type === 'card' ? CreditCard : QrCode,
+    }));
+
+    return [
+      ...savedCards,
+      ...accepted,
+      { id: 'cod', title: 'Cash on Delivery', subtitle: 'Pay when the order arrives', icon: ShoppingBag },
+    ];
+  }, [acceptedPaymentMethods, savedPaymentMethods]);
+
+  const [paymentMode, setPaymentMode] = useState(() => paymentOptions[0]?.id || 'cod');
   const [message, setMessage] = useState('');
 
   const savedProfile = useMemo(() => {
@@ -38,6 +83,8 @@ export default function Checkout() {
     pincode: savedProfile?.pincode || '',
   });
 
+  const selectedPaymentOption = paymentOptions.find((item) => item.id === paymentMode);
+
   const handleChange = (event) => {
     const { name, value } = event.target;
     setForm((current) => ({ ...current, [name]: value }));
@@ -53,7 +100,7 @@ export default function Checkout() {
 
     const order = await placeOrder({
       customer: form,
-      paymentMode,
+      paymentMode: selectedPaymentOption?.title || paymentMode,
       items: items.map((item) => ({ productId: item.productId, quantity: item.quantity })),
     });
 
@@ -66,14 +113,14 @@ export default function Checkout() {
 
   return (
     <div className="min-h-screen bg-[#f7f1ff] pt-24">
-      <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8">
         <div className="mb-8">
           <p className="text-sm font-semibold uppercase tracking-[0.35em] text-[#7b47c8]">Checkout</p>
           <h1 className="mt-3 font-serif text-4xl text-[#121212]">Simple, fast, and secure checkout</h1>
         </div>
 
         {!items.length ? (
-          <div className="card-luxury rounded-3xl p-10 text-center">
+          <div className="card-luxury rounded-3xl p-8 text-center sm:p-10">
             <ShoppingBag className="mx-auto text-[#7b47c8]" size={28} />
             <h2 className="mt-4 font-serif text-3xl text-[#121212]">Your cart is empty</h2>
             <p className="mt-3 text-[#4B2C6F]/70">Browse the collection and add your favorite pieces before checkout.</p>
@@ -83,7 +130,7 @@ export default function Checkout() {
           </div>
         ) : (
           <form className="grid gap-8 lg:grid-cols-[1fr_0.8fr]" onSubmit={handlePlaceOrder}>
-            <div className="card-luxury rounded-3xl p-8">
+            <div className="card-luxury rounded-3xl p-5 sm:p-8">
               <h2 className="text-2xl font-semibold text-[#121212]">Shipping details</h2>
               <div className="mt-6 grid gap-4">
                 <input name="fullName" value={form.fullName} onChange={handleChange} required className="rounded-2xl border border-[#5b2ca0]/18 bg-white px-4 py-3 text-[#4B2C6F] placeholder:text-[#4B2C6F]/40 focus:border-[#7b47c8] focus:outline-none" placeholder="Full name" />
@@ -96,25 +143,30 @@ export default function Checkout() {
               </div>
 
               <h2 className="mt-10 text-2xl font-semibold text-[#121212]">Payment method</h2>
-              <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                {[
-                  { id: 'upi', title: 'UPI', icon: QrCode },
-                  { id: 'razorpay', title: 'Razorpay', icon: CreditCard },
-                  { id: 'cod', title: 'COD', icon: ShoppingBag },
-                ].map((item) => (
+              <div className="mt-4 grid gap-3">
+                {paymentOptions.map((item) => (
                   <button
                     key={item.id}
                     type="button"
                     onClick={() => setPaymentMode(item.id)}
-                    className={`flex items-center gap-3 rounded-2xl border px-4 py-4 text-left transition ${
-                      paymentMode === item.id ? 'border-[#7b47c8]/45 bg-[#7b47c8]/10 font-semibold text-[#4B2C6F]' : 'border-[#5b2ca0]/15 bg-white text-[#4B2C6F]/60'
+                    className={`flex items-start gap-3 rounded-2xl border px-4 py-4 text-left transition ${
+                      paymentMode === item.id ? 'border-[#7b47c8]/45 bg-[#7b47c8]/10 font-semibold text-[#4B2C6F]' : 'border-[#5b2ca0]/15 bg-white text-[#4B2C6F]/70'
                     }`}
                   >
-                    <item.icon size={18} />
-                    {item.title}
+                    <item.icon size={18} className="mt-0.5 shrink-0" />
+                    <div>
+                      <p>{item.title}</p>
+                      <p className="mt-1 text-sm font-normal text-[#4B2C6F]/60">{item.subtitle}</p>
+                    </div>
                   </button>
                 ))}
               </div>
+
+              {brandInfo.paymentInstructions ? (
+                <div className="mt-5 rounded-2xl border border-[#e4d8f4] bg-[#fbf9ff] px-4 py-3 text-sm leading-6 text-[#6c5d82]">
+                  {brandInfo.paymentInstructions}
+                </div>
+              ) : null}
 
               {message ? (
                 <p className="mt-6 rounded-2xl border border-[#7b47c8]/16 bg-[#7b47c8]/8 px-4 py-3 text-[#7b47c8]">
@@ -123,13 +175,13 @@ export default function Checkout() {
               ) : null}
             </div>
 
-            <div className="luxury-panel rounded-3xl p-8">
+            <div className="luxury-panel rounded-3xl p-5 sm:p-8">
               <h2 className="text-2xl text-white">Order summary</h2>
               <div className="mt-6 space-y-4 text-white/75">
                 {items.map((item) => (
                   <div key={item.productId} className="rounded-2xl border border-white/10 bg-white/5 p-4">
                     <div className="flex items-start justify-between gap-3">
-                      <div>
+                      <div className="min-w-0">
                         <p className="font-medium text-white">{item.product.name}</p>
                         <p className="mt-1 text-xs uppercase tracking-[0.24em] text-[#d9c0ff]">{item.product.collection}</p>
                       </div>
@@ -141,7 +193,7 @@ export default function Checkout() {
                         <Trash2 size={16} />
                       </button>
                     </div>
-                    <div className="mt-4 flex items-center justify-between gap-3">
+                    <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
                       <div className="flex items-center rounded-full border border-white/10 bg-white/5">
                         <button type="button" onClick={() => updateCartQuantity(item.productId, Math.max(1, item.quantity - 1))} className="px-3 py-2">
                           -
@@ -160,6 +212,10 @@ export default function Checkout() {
                   <span>Shipping</span>
                   <span>Free</span>
                 </div>
+                <div className="flex items-center justify-between">
+                  <span>Payment</span>
+                  <span>{selectedPaymentOption?.title || 'Not selected'}</span>
+                </div>
                 <div className="flex items-center justify-between border-t border-white/10 pt-4 text-white">
                   <span>Total</span>
                   <span>{formatPrice(subtotal)}</span>
@@ -172,7 +228,7 @@ export default function Checkout() {
                   Secure and payment-ready
                 </div>
                 <p className="mt-2 text-sm text-white/70">
-                  Orders are currently stored locally so the checkout experience remains fully functional within the application.
+                  Saved cards only keep masked details like last 4 digits and expiry. Full card number and CVV are never stored in this app.
                 </p>
               </div>
 

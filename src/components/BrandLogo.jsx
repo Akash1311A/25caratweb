@@ -23,7 +23,7 @@ export default function BrandLogo({
             compact ? 'text-[0.98rem] sm:text-[1.8rem]' : 'text-2xl sm:text-4xl'
           } ${isDark ? 'text-[#D4AF37]' : 'text-white'} ${titleClassName}`}
         >
-          Twenty Five Carat
+          25carat
         </p>
         <p
           className={`mt-1 font-serif italic leading-none ${

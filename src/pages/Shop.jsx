@@ -1,4 +1,5 @@
 import { Link, useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Grid, List, Search, SlidersHorizontal } from 'lucide-react';
 import ProductCard from '../components/ProductCard';
 import { useStore } from '../context/StoreContext';
@@ -9,6 +10,7 @@ function formatPrice(value) {
 }
 
 export default function Shop() {
+  const navigate = useNavigate();
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('All');
   const [collection, setCollection] = useState('All');
@@ -35,6 +37,13 @@ export default function Shop() {
             badge: product?.badge || 'Explore',
             image: product?.image || 'https://images.unsplash.com/photo-1617038220319-276d3cfab638?w=900&h=1200&fit=crop',
             images: Array.isArray(product?.images) && product.images.length ? product.images : [product?.image || 'https://images.unsplash.com/photo-1617038220319-276d3cfab638?w=900&h=1200&fit=crop'],
+            imageDisplayWidth: Number(product?.imageDisplayWidth) || 0,
+            imageDisplayHeight: Number(product?.imageDisplayHeight) || 0,
+            imageFit: product?.imageFit || 'cover',
+            imagePosition: product?.imagePosition || 'center',
+            imagePositionX: product?.imagePositionX || '50%',
+            imagePositionY: product?.imagePositionY || '50%',
+            imageScale: Number(product?.imageScale) || 1,
             inStock: Boolean(product?.inStock),
             rating: Number(product?.rating) || 0,
             reviews: Number(product?.reviews) || 0,
@@ -113,9 +122,6 @@ export default function Shop() {
 
     return result;
   }, [category, collection, color, query, sortBy]);
-
-  const catalogHighlights = filteredProducts.slice(0, 2);
-  const catalogProducts = filteredProducts.slice(2);
 
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top,#f7f0ff_0%,#f3ebff_34%,#fcf8ff_100%)] pt-[138px]">
@@ -326,26 +332,29 @@ export default function Shop() {
             <section className="card-luxury rounded-[2rem] p-5 sm:p-6">
               <div className="flex flex-wrap items-end justify-between gap-4">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#7b47c8]">Shop Catalog</p>
-                  <h2 className="mt-2 font-serif text-3xl text-[#161021] sm:text-4xl">Selected highlights</h2>
+                  <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#7b47c8]">Storefront</p>
+                  <h2 className="mt-2 font-serif text-3xl text-[#161021] sm:text-4xl">Shop all products</h2>
                 </div>
                 <span className="rounded-full bg-[linear-gradient(135deg,#f4e3a7,#d4af37)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-[#2f124d]">
-                  {catalogHighlights.length} Highlights
+                  {filteredProducts.length} Products
                 </span>
               </div>
 
-              {catalogHighlights.length ? (
-                <div className="mt-6 grid gap-6 xl:grid-cols-2">
-                  {catalogHighlights.map((product) => {
+              {filteredProducts.length ? (
+                <div className={`mt-6 grid gap-6 ${viewMode === 'grid' ? 'grid-cols-1 sm:grid-cols-2 xl:grid-cols-3' : 'grid-cols-1'}`}>
+                  {filteredProducts.map((product) => {
                     const discountPercent = Math.round((1 - product.price / product.originalPrice) * 100);
 
                     return (
                       <article
                         key={product.id}
-                        className="overflow-hidden rounded-[1.8rem] border border-[#5b2ca0]/10 bg-white shadow-[0_18px_36px_rgba(59,27,98,0.08)]"
+                        className={`overflow-hidden rounded-[1.8rem] border border-[#5b2ca0]/10 bg-white shadow-[0_18px_36px_rgba(59,27,98,0.08)] ${
+                          viewMode === 'list' ? '' : 'hidden'
+                        }`}
+                        onClick={() => navigate(`/product/${product.id}`)}
                       >
                         <div className="grid lg:grid-cols-[0.9fr_1.1fr]">
-                          <Link to={`/product/${product.id}`} className="relative block h-full min-h-[220px] overflow-hidden lg:min-h-[260px]">
+                          <Link to={`/product/${product.id}`} onClick={(event) => event.stopPropagation()} className="relative block h-full min-h-[220px] overflow-hidden lg:min-h-[260px]">
                             <img
                               src={product.image}
                               alt={product.name}
@@ -399,13 +408,17 @@ export default function Shop() {
                             <div className="mt-6 flex flex-wrap gap-3">
                               <button
                                 type="button"
-                                onClick={() => addToCart(product.id, 1)}
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  addToCart(product.id, 1);
+                                }}
                                 className="inline-flex flex-1 items-center justify-center gap-2 rounded-full border border-[#5b2ca0]/18 bg-[#5b2ca0]/8 px-4 py-3 text-sm font-semibold text-[#241137] transition hover:border-[#7b47c8]/35 hover:bg-[#7b47c8]/12"
                               >
                                 Add to Cart
                               </button>
                               <Link
                                 to={`/product/${product.id}`}
+                                onClick={(event) => event.stopPropagation()}
                                 className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-[linear-gradient(135deg,#f2d58c,#d4af37)] px-4 py-3 text-sm font-semibold text-[#2f124d] transition hover:brightness-105"
                               >
                                 View Product
@@ -422,22 +435,9 @@ export default function Shop() {
                   Matching products nahi mile. Filters change karke dubara dekho.
                 </div>
               )}
-            </section>
-
-            <section className="card-luxury rounded-[2rem] p-5 sm:p-6">
-              <div className="flex flex-wrap items-end justify-between gap-4">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#7b47c8]">All Products</p>
-                  <h2 className="mt-2 font-serif text-3xl text-[#161021] sm:text-4xl">Full collection</h2>
-                </div>
-                <span className="rounded-full bg-[#efe7ff] px-4 py-2 text-xs font-semibold uppercase tracking-[0.22em] text-[#5b2ca0]">
-                  {catalogProducts.length} More Products
-                </span>
-              </div>
-
-              {catalogProducts.length ? (
-                <div className={`mt-6 grid gap-6 ${viewMode === 'grid' ? 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4' : 'grid-cols-1'}`}>
-                  {catalogProducts.map((product) => (
+              {filteredProducts.length ? (
+                <div className={`mt-6 ${viewMode === 'grid' ? 'grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3' : 'hidden'}`}>
+                  {filteredProducts.map((product) => (
                     <ProductCard
                       key={product.id}
                       product={product}
@@ -448,10 +448,6 @@ export default function Shop() {
                     />
                   ))}
                 </div>
-              ) : filteredProducts.length ? (
-                <div className="mt-6 rounded-[1.5rem] border border-[#5b2ca0]/10 bg-white p-6 text-sm text-[#4B2C6F]/72">
-                  Matching products highlighted section me dikh rahe hain.
-                </div>
               ) : null}
             </section>
           </div>
@@ -460,4 +456,3 @@ export default function Shop() {
     </div>
   );
 }
-

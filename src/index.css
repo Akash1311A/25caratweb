@@ -146,20 +146,32 @@ h6 {
 .product-card-media {
   display: block;
   width: 100%;
-  min-height: 320px;
-  aspect-ratio: 5 / 8;
+  min-height: 240px;
+  aspect-ratio: 4 / 5;
   flex-shrink: 0;
+  background: linear-gradient(180deg, #fbf7ff, #f4edff);
 }
 
 .product-card-media-list {
-  min-height: 320px;
+  min-height: 260px;
   aspect-ratio: 1 / 1;
+}
+
+.product-card-description {
+  display: none;
 }
 
 @media (min-width: 640px) {
   .product-card-media {
-    min-height: 360px;
+    min-height: 340px;
     aspect-ratio: 2 / 3;
+  }
+
+  .product-card-description {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
   }
 }
 

@@ -19,28 +19,37 @@ export default function Home() {
   const { products, collections, reviews, brandInfo, homeContent } = useContent();
   const [currentImage, setCurrentImage] = useState(0);
 
+  const customHeroImages = useMemo(
+    () =>
+      (homeContent.heroImages || [])
+        .map((value) => String(value || '').trim())
+        .filter((value, index, array) => value && array.indexOf(value) === index),
+    [homeContent.heroImages],
+  );
+
   const heroImages = useMemo(
     () =>
-      [
-        homeContent.heroImage,
-        products[0]?.image?.replace('w=600&h=800', 'w=1920&h=1200'),
-        collections[1]?.image?.replace('w=600&h=600', 'w=1920&h=1200'),
-        products[2]?.image?.replace('w=600&h=800', 'w=1920&h=1200'),
-        products[3]?.image?.replace('w=600&h=800', 'w=1920&h=1200'),
-      ].filter((value, index, array) => value && array.indexOf(value) === index),
-    [collections, homeContent.heroImage, products],
+      customHeroImages.length
+        ? customHeroImages
+        : [homeContent.heroImage].filter(Boolean),
+    [customHeroImages, homeContent.heroImage],
   );
 
   const heroFallbackImage = useMemo(
-    () =>
-      homeContent.heroImage ||
-      products[4]?.image?.replace('w=600&h=800', 'w=1920&h=1200') ||
-      products[0]?.image ||
-      '',
-    [homeContent.heroImage, products],
+    () => heroImages[0] || homeContent.heroImage || '',
+    [heroImages, homeContent.heroImage],
   );
 
   const featuredProducts = useMemo(() => products.slice(0, 4), [products]);
+
+  useEffect(() => {
+    if (!heroImages.length) {
+      setCurrentImage(0);
+      return;
+    }
+
+    setCurrentImage((prev) => (prev >= heroImages.length ? 0 : prev));
+  }, [heroImages.length]);
 
   useEffect(() => {
     if (!heroImages.length) return undefined;

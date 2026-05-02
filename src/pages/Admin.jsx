@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ArrowDown,
@@ -9,6 +9,7 @@ import {
   Boxes,
   Building2,
   CheckCircle2,
+  CreditCard,
   Eye,
   FileText,
   Image,
@@ -29,6 +30,7 @@ import {
 } from 'lucide-react';
 import { useContent } from '../context/ContentContext';
 import { useStore } from '../context/StoreContext';
+import { api } from '../lib/api';
 
 const sections = [
   { id: 'overview', label: 'Overview', icon: LayoutDashboard },
@@ -83,9 +85,22 @@ const emptyReview = {
   verified: true,
 };
 
+const emptyPaymentMethod = {
+  id: `payment-${Date.now()}`,
+  type: 'card',
+  cardType: 'credit',
+  label: 'New Card',
+  provider: '',
+  upiId: '',
+  holderName: '',
+  cardLast4: '',
+  expiry: '',
+  issuer: '',
+  note: '',
+};
+
 const homeFields = [
   ['heroBadge', 'Hero badge'],
-  ['heroImage', 'Hero image URL'],
   ['heroTitle', 'Hero title'],
   ['heroSubtitle', 'Hero subtitle'],
   ['heroPrimaryCta', 'Primary button'],
@@ -127,6 +142,56 @@ function moveItem(list, fromIndex, toIndex) {
 
 function clampImageScale(value) {
   return Math.min(1.8, Math.max(0.7, Number(value) || 1));
+}
+
+function getSafePreviewImageSize(value) {
+  const size = Number(value);
+  return size >= 120 ? `${size}px` : '100%';
+}
+
+function getSafePreviewImageScale(value) {
+  const scale = Number(value);
+  return scale >= 0.7 && scale <= 2.5 ? scale : 1;
+}
+
+function normalizeHomeImages(value) {
+  return (value || []).map(normalizeImageUrl);
+}
+
+function normalizeImageUrl(value) {
+  const input = String(value || '').trim().replace(/\\/g, '/');
+  if (!input) return '';
+  if (input.startsWith('data:image/')) return input;
+
+  if (input.startsWith('uploads/')) {
+    return `/${input}`;
+  }
+
+  if (input.startsWith('/public/uploads/')) {
+    return input.replace('/public', '');
+  }
+
+  try {
+    const url = new URL(input);
+    if ((url.hostname === '127.0.0.1' || url.hostname === 'localhost') && url.pathname.startsWith('/uploads/')) {
+      return `${url.pathname}${url.search}`;
+    }
+  } catch {
+    return input;
+  }
+
+  return input;
+}
+
+function isDataImageUrl(value) {
+  return String(value || '').startsWith('data:image/');
+}
+
+async function dataUrlToFile(dataUrl, fileName) {
+  const response = await fetch(dataUrl);
+  const blob = await response.blob();
+  const extension = blob.type.split('/')[1]?.replace('jpeg', 'jpg') || 'png';
+  return new File([blob], `${fileName}.${extension}`, { type: blob.type || 'image/png' });
 }
 
 function inputClassName(multiline = false) {
@@ -201,8 +266,9 @@ function ProductPreview({ product }) {
   if (!product) return null;
 
   const discount = product.originalPrice ? Math.max(0, Math.round((1 - product.price / product.originalPrice) * 100)) : 0;
-  const imageWidth = Number(product.imageDisplayWidth) > 0 ? `${product.imageDisplayWidth}px` : '100%';
-  const imageHeight = Number(product.imageDisplayHeight) > 0 ? `${product.imageDisplayHeight}px` : '100%';
+  const imageWidth = getSafePreviewImageSize(product.imageDisplayWidth);
+  const imageHeight = getSafePreviewImageSize(product.imageDisplayHeight);
+  const imageScale = getSafePreviewImageScale(product.imageScale);
   const imagePosition =
     product.imagePositionX || product.imagePositionY
       ? `${product.imagePositionX || '50%'} ${product.imagePositionY || '50%'}`
@@ -222,7 +288,7 @@ function ProductPreview({ product }) {
               maxWidth: 'none',
               objectFit: product.imageFit || 'cover',
               objectPosition: imagePosition,
-              transform: product.imageScale ? `scale(${product.imageScale})` : undefined,
+              transform: imageScale !== 1 ? `scale(${imageScale})` : undefined,
               transformOrigin: imagePosition,
             }}
           />
@@ -277,6 +343,9 @@ export default function Admin() {
   const [statusMessage, setStatusMessage] = useState('Auto-save is active. Changes are stored in the backend after login.');
   const [loginForm, setLoginForm] = useState({ email: 'admin@25carat.local', password: 'admin123' });
   const [loginError, setLoginError] = useState('');
+  const [adminUsers, setAdminUsers] = useState([]);
+  const [newAdminForm, setNewAdminForm] = useState({ name: '', email: '', password: '', role: 'admin' });
+  const migratedImageUrlsRef = useRef(false);
 
   const selectedProduct = products[selectedProductIndex] || products[0];
   const selectedCollection = collections[selectedCollectionIndex] || collections[0];
@@ -309,42 +378,131 @@ export default function Admin() {
 
   const saveNotice = (message) => setStatusMessage(message);
 
-  const handleHomeHeroUpload = (event) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+  const uploadImageFile = async (file) => {
+    if (!file) return null;
 
     if (!file.type.startsWith('image/')) {
       saveNotice('Please choose a valid image file.');
-      event.target.value = '';
-      return;
+      return null;
     }
 
-    const reader = new FileReader();
+    try {
+      saveNotice(`Uploading ${file.name}...`);
+      const uploaded = await api.uploadImage(file);
+      saveNotice(`${file.name} uploaded and saved.`);
+      return normalizeImageUrl(uploaded.url);
+    } catch (error) {
+      saveNotice(error.message || 'Image upload failed. Please try another image.');
+      return null;
+    }
+  };
 
-    reader.onload = () => {
-      setHomeContent((current) => ({
+  const updateHomeImages = (updater) => {
+    setHomeContent((current) => {
+      const previousImages = normalizeHomeImages(current.heroImages?.length ? current.heroImages : [current.heroImage]);
+      const nextImages = normalizeHomeImages(typeof updater === 'function' ? updater(previousImages) : updater);
+      const filteredImages = nextImages.filter(Boolean);
+
+      return {
         ...current,
-        heroImage: String(reader.result || ''),
-      }));
-      saveNotice(`Hero image uploaded: ${file.name}`);
-      event.target.value = '';
-    };
+        heroImages: nextImages,
+        heroImage: filteredImages[0] || '',
+      };
+    });
+  };
 
-    reader.onerror = () => {
-      saveNotice('Image upload failed. Please try another file.');
-      event.target.value = '';
-    };
+  const handleHomeHeroUpload = async (event, targetIndex) => {
+    const file = event.target.files?.[0];
+    const uploadedUrl = await uploadImageFile(file);
 
-    reader.readAsDataURL(file);
+    if (uploadedUrl) {
+      updateHomeImages((current) => {
+        const next = current.length ? [...current] : [''];
+        const safeIndex = typeof targetIndex === 'number' ? targetIndex : 0;
+        while (next.length <= safeIndex) next.push('');
+        next[safeIndex] = uploadedUrl;
+        return next;
+      });
+    }
+
+    event.target.value = '';
   };
 
   useEffect(() => {
     if (!isAdminAuthenticated) return;
 
-    refreshAdminRecords()
-      .then(() => saveNotice('Backend orders and enquiries loaded.'))
+    Promise.all([refreshAdminRecords(), api.getAdminUsers()])
+      .then(([, users]) => {
+        setAdminUsers(users);
+        saveNotice('Backend orders, enquiries, and admin accounts loaded.');
+      })
       .catch(() => saveNotice('Could not load backend records. Check API server.'));
   }, [isAdminAuthenticated]);
+
+  useEffect(() => {
+    if (!isAdminAuthenticated || migratedImageUrlsRef.current) return;
+
+    const migrateDataImages = async () => {
+      const convertImage = async (value, name) => {
+        const normalized = normalizeImageUrl(value);
+        if (!isDataImageUrl(normalized)) return normalized;
+
+        const file = await dataUrlToFile(normalized, name);
+        const uploaded = await api.uploadImage(file);
+        return normalizeImageUrl(uploaded.url);
+      };
+
+      try {
+        let convertedCount = 0;
+        const currentHomeImages = normalizeHomeImages(homeContent.heroImages?.length ? homeContent.heroImages : [homeContent.heroImage]);
+        const nextHomeImages = [];
+
+        for (let index = 0; index < currentHomeImages.length; index += 1) {
+          const nextImage = await convertImage(currentHomeImages[index], `homepage-slide-${index + 1}`);
+          if (nextImage !== currentHomeImages[index]) convertedCount += 1;
+          nextHomeImages.push(nextImage);
+        }
+
+        if (convertedCount) {
+          updateHomeImages(nextHomeImages);
+        }
+
+        const nextProducts = [];
+        let productsChanged = false;
+
+        for (const product of products) {
+          const nextImage = await convertImage(product.image, `product-${product.id || Date.now()}`);
+          const currentGallery = Array.isArray(product.images) ? product.images.map(normalizeImageUrl) : [];
+          const nextGallery = [];
+
+          for (let index = 0; index < currentGallery.length; index += 1) {
+            nextGallery.push(await convertImage(currentGallery[index], `product-${product.id || Date.now()}-${index + 1}`));
+          }
+
+          const changed =
+            nextImage !== normalizeImageUrl(product.image) ||
+            JSON.stringify(nextGallery) !== JSON.stringify(currentGallery);
+
+          productsChanged = productsChanged || changed;
+          nextProducts.push(changed ? { ...product, image: nextImage, images: nextGallery } : product);
+        }
+
+        if (productsChanged) {
+          setProducts(nextProducts);
+        }
+
+        if (convertedCount || productsChanged) {
+          saveNotice('Old base64 images converted to permanent upload links.');
+        }
+      } catch (error) {
+        saveNotice(error.message || 'Could not convert old image links. Please upload the image again.');
+      } finally {
+        migratedImageUrlsRef.current = true;
+      }
+    };
+
+    migrateDataImages();
+  }, [homeContent.heroImage, homeContent.heroImages, isAdminAuthenticated, products]);
 
   if (!isAdminAuthenticated) {
     return (
@@ -418,6 +576,15 @@ export default function Admin() {
     setReviews((current) =>
       current.map((review, index) => (index === selectedReviewIndex ? { ...review, [field]: value } : review)),
     );
+  };
+
+  const updatePaymentMethod = (paymentMethodId, field, value) => {
+    setBrandInfo((current) => ({
+      ...current,
+      paymentMethods: (current.paymentMethods || []).map((method) =>
+        method.id === paymentMethodId ? { ...method, [field]: value } : method,
+      ),
+    }));
   };
 
   const moveSelectedProduct = (direction) => {
@@ -591,6 +758,285 @@ export default function Admin() {
                 <Field label="Highlights" hint="One highlight per line." className="md:col-span-2">
                   <textarea className={inputClassName(true)} value={(brandInfo.highlights || []).join('\n')} onChange={(event) => { setBrandInfo((current) => ({ ...current, highlights: splitLines(event.target.value) })); saveNotice('Brand highlights updated.'); }} />
                 </Field>
+                <Field label="Payment instructions" className="md:col-span-2">
+                  <textarea
+                    className={inputClassName(true)}
+                    value={brandInfo.paymentInstructions || ''}
+                    onChange={(event) => {
+                      setBrandInfo((current) => ({ ...current, paymentInstructions: event.target.value }));
+                      saveNotice('Payment instructions updated.');
+                    }}
+                  />
+                </Field>
+                <div className="md:col-span-2 rounded-2xl border border-[#e4d8f4] bg-[#fbf9ff] p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#6a5688]">Accepted payment methods</p>
+                      <p className="mt-2 text-sm leading-6 text-[#6c5d82]">
+                        Credit card, debit card, aur UPI options yahan manage karo. Security ke liye sirf masked card details store karo.
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setBrandInfo((current) => ({
+                            ...current,
+                            paymentMethods: [
+                              ...(current.paymentMethods || []),
+                              { ...emptyPaymentMethod, id: `payment-${Date.now()}`, label: 'New Card' },
+                            ],
+                          }));
+                          saveNotice('New card payment method added.');
+                        }}
+                        className="inline-flex items-center justify-center gap-2 rounded-full border border-[#241137] bg-[#241137] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#4b2c6f]"
+                      >
+                        <CreditCard size={16} />
+                        Add Card
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setBrandInfo((current) => ({
+                            ...current,
+                            paymentMethods: [
+                              ...(current.paymentMethods || []),
+                              {
+                                ...emptyPaymentMethod,
+                                id: `payment-${Date.now()}`,
+                                type: 'upi',
+                                label: 'New UPI',
+                                cardType: '',
+                              },
+                            ],
+                          }));
+                          saveNotice('New UPI payment method added.');
+                        }}
+                        className="inline-flex items-center justify-center gap-2 rounded-full border border-[#d9c9ef] bg-white px-4 py-2 text-sm font-semibold text-[#4b2c6f] transition hover:bg-[#f5efff]"
+                      >
+                        <Plus size={16} />
+                        Add UPI
+                      </button>
+                    </div>
+                  </div>
+                  <div className="mt-4 space-y-4">
+                    {(brandInfo.paymentMethods || []).map((method, index) => (
+                      <div key={method.id || index} className="rounded-2xl border border-[#e4d8f4] bg-white p-4">
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                          <p className="text-sm font-bold text-[#241137]">{method.label || `Payment method ${index + 1}`}</p>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setBrandInfo((current) => ({
+                                ...current,
+                                paymentMethods: (current.paymentMethods || []).filter((item) => item.id !== method.id),
+                              }));
+                              saveNotice('Payment method removed.');
+                            }}
+                            className="inline-flex items-center justify-center gap-2 rounded-full border border-[#f0c9c2] bg-[#fff4f1] px-4 py-2 text-sm font-semibold text-[#a24b3a] transition hover:bg-[#ffe9e4]"
+                          >
+                            <Trash2 size={16} />
+                            Remove
+                          </button>
+                        </div>
+                        <div className="mt-4 grid gap-4 md:grid-cols-2">
+                          <Field label="Type">
+                            <select
+                              className={inputClassName()}
+                              value={method.type || 'card'}
+                              onChange={(event) => {
+                                updatePaymentMethod(method.id, 'type', event.target.value);
+                                saveNotice('Payment method type updated.');
+                              }}
+                            >
+                              <option value="card">Card</option>
+                              <option value="upi">UPI</option>
+                            </select>
+                          </Field>
+                          <Field label="Label">
+                            <input
+                              className={inputClassName()}
+                              value={method.label || ''}
+                              onChange={(event) => {
+                                updatePaymentMethod(method.id, 'label', event.target.value);
+                                saveNotice('Payment label updated.');
+                              }}
+                            />
+                          </Field>
+                          {method.type === 'card' ? (
+                            <>
+                              <Field label="Card type">
+                                <select
+                                  className={inputClassName()}
+                                  value={method.cardType || 'credit'}
+                                  onChange={(event) => {
+                                    updatePaymentMethod(method.id, 'cardType', event.target.value);
+                                    saveNotice('Card type updated.');
+                                  }}
+                                >
+                                  <option value="credit">Credit card</option>
+                                  <option value="debit">Debit card</option>
+                                </select>
+                              </Field>
+                              <Field label="Card holder">
+                                <input
+                                  className={inputClassName()}
+                                  value={method.holderName || ''}
+                                  onChange={(event) => {
+                                    updatePaymentMethod(method.id, 'holderName', event.target.value);
+                                    saveNotice('Card holder updated.');
+                                  }}
+                                />
+                              </Field>
+                              <Field label="Last 4 digits" hint="Full card number store mat karo. Sirf last 4 digits dalo.">
+                                <input
+                                  className={inputClassName()}
+                                  maxLength={4}
+                                  value={method.cardLast4 || ''}
+                                  onChange={(event) => {
+                                    updatePaymentMethod(method.id, 'cardLast4', event.target.value.replace(/\D/g, '').slice(-4));
+                                    saveNotice('Card last 4 digits updated.');
+                                  }}
+                                />
+                              </Field>
+                              <Field label="Expiry">
+                                <input
+                                  className={inputClassName()}
+                                  placeholder="MM/YY"
+                                  value={method.expiry || ''}
+                                  onChange={(event) => {
+                                    updatePaymentMethod(method.id, 'expiry', event.target.value);
+                                    saveNotice('Card expiry updated.');
+                                  }}
+                                />
+                              </Field>
+                              <Field label="Issuer">
+                                <input
+                                  className={inputClassName()}
+                                  value={method.issuer || ''}
+                                  onChange={(event) => {
+                                    updatePaymentMethod(method.id, 'issuer', event.target.value);
+                                    saveNotice('Card issuer updated.');
+                                  }}
+                                />
+                              </Field>
+                            </>
+                          ) : (
+                            <>
+                              <Field label="Provider">
+                                <input
+                                  className={inputClassName()}
+                                  value={method.provider || ''}
+                                  onChange={(event) => {
+                                    updatePaymentMethod(method.id, 'provider', event.target.value);
+                                    saveNotice('UPI provider updated.');
+                                  }}
+                                />
+                              </Field>
+                              <Field label="UPI ID">
+                                <input
+                                  className={inputClassName()}
+                                  value={method.upiId || ''}
+                                  onChange={(event) => {
+                                    updatePaymentMethod(method.id, 'upiId', event.target.value);
+                                    saveNotice('UPI ID updated.');
+                                  }}
+                                />
+                              </Field>
+                            </>
+                          )}
+                          <Field label="Note" className="md:col-span-2">
+                            <textarea
+                              className={inputClassName(true)}
+                              value={method.note || ''}
+                              onChange={(event) => {
+                                updatePaymentMethod(method.id, 'note', event.target.value);
+                                saveNotice('Payment note updated.');
+                              }}
+                            />
+                          </Field>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="md:col-span-2 rounded-2xl border border-[#e4d8f4] bg-[#fbf9ff] p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#6a5688]">Admin accounts</p>
+                      <p className="mt-2 text-sm leading-6 text-[#6c5d82]">
+                        Yahan se naye admin login accounts create kar sakte ho. Existing content changes safe rahenge.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_0.9fr]">
+                    <div className="space-y-3">
+                      {adminUsers.length ? adminUsers.map((user) => (
+                        <div key={user.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#e4d8f4] bg-white p-4">
+                          <div>
+                            <p className="font-bold text-[#241137]">{user.name}</p>
+                            <p className="mt-1 text-sm text-[#6c5d82]">{user.email}</p>
+                            <p className="mt-1 text-xs font-bold uppercase tracking-[0.18em] text-[#7b47c8]">{user.role}</p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              try {
+                                await api.removeAdminUser(user.id);
+                                setAdminUsers((current) => current.filter((entry) => entry.id !== user.id));
+                                saveNotice(`Admin account ${user.email} removed.`);
+                              } catch (error) {
+                                saveNotice(error.message || 'Admin account remove nahi ho paaya.');
+                              }
+                            }}
+                            className="inline-flex items-center justify-center gap-2 rounded-full border border-[#f0c9c2] bg-[#fff4f1] px-4 py-2 text-sm font-semibold text-[#a24b3a] transition hover:bg-[#ffe9e4]"
+                          >
+                            <Trash2 size={16} />
+                            Remove
+                          </button>
+                        </div>
+                      )) : (
+                        <p className="rounded-2xl border border-dashed border-[#d9c9ef] px-4 py-6 text-sm text-[#8a7a9f]">No admin accounts loaded yet.</p>
+                      )}
+                    </div>
+                    <form
+                      className="rounded-2xl border border-[#e4d8f4] bg-white p-4"
+                      onSubmit={async (event) => {
+                        event.preventDefault();
+
+                        try {
+                          const createdUser = await api.createAdminUser(newAdminForm);
+                          setAdminUsers((current) => [createdUser, ...current]);
+                          setNewAdminForm({ name: '', email: '', password: '', role: 'admin' });
+                          saveNotice(`Admin account ${createdUser.email} created.`);
+                        } catch (error) {
+                          saveNotice(error.message || 'Admin account create nahi ho paaya.');
+                        }
+                      }}
+                    >
+                      <div className="grid gap-4">
+                        <Field label="Admin name">
+                          <input className={inputClassName()} value={newAdminForm.name} onChange={(event) => setNewAdminForm((current) => ({ ...current, name: event.target.value }))} />
+                        </Field>
+                        <Field label="Admin email">
+                          <input className={inputClassName()} type="email" value={newAdminForm.email} onChange={(event) => setNewAdminForm((current) => ({ ...current, email: event.target.value }))} />
+                        </Field>
+                        <Field label="Password">
+                          <input className={inputClassName()} type="password" value={newAdminForm.password} onChange={(event) => setNewAdminForm((current) => ({ ...current, password: event.target.value }))} />
+                        </Field>
+                        <Field label="Role">
+                          <select className={inputClassName()} value={newAdminForm.role} onChange={(event) => setNewAdminForm((current) => ({ ...current, role: event.target.value }))}>
+                            <option value="admin">Admin</option>
+                            <option value="owner">Owner</option>
+                          </select>
+                        </Field>
+                        <button type="submit" className="inline-flex h-11 items-center justify-center rounded-full bg-[#241137] px-5 text-sm font-bold text-white transition hover:bg-[#4b2c6f]">
+                          Create Admin Account
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
               </div>
             </Panel>
           ) : null}
@@ -608,43 +1054,79 @@ export default function Admin() {
                   </Field>
                 ))}
                 <div className="md:col-span-2 rounded-2xl border border-[#e4d8f4] bg-[#fbf9ff] p-4">
-                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#6a5688]">Hero image preview</p>
+                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#6a5688]">Homepage hero images</p>
                   <p className="mt-2 text-sm leading-6 text-[#6c5d82]">
-                    Yahan wali image homepage ke sabse top hero section me sabse pehle show hogi.
+                    Yahan se aap homepage slider ki sari images alag-alag control kar sakte ho. Ab product image automatic use nahi hogi.
                   </p>
-                  <div className="mt-4 flex flex-wrap gap-3">
-                    <label className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-full border border-[#7b47c8] bg-[#7b47c8] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#5b2ca0]">
-                      <Image size={16} />
-                      Upload image
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={handleHomeHeroUpload}
-                      />
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setHomeContent((current) => ({ ...current, heroImage: '' }));
-                        saveNotice('Hero image cleared.');
-                      }}
-                      className="inline-flex items-center justify-center gap-2 rounded-full border border-[#d9c9ef] bg-white px-4 py-2 text-sm font-semibold text-[#4b2c6f] transition hover:bg-[#f5efff]"
-                    >
-                      Remove image
-                    </button>
+                  <div className="mt-4 space-y-4">
+                    {normalizeHomeImages(homeContent.heroImages?.length ? homeContent.heroImages : [homeContent.heroImage]).map((image, index) => (
+                      <div key={`home-hero-image-${index}`} className="rounded-2xl border border-[#e4d8f4] bg-white p-4">
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                          <p className="text-sm font-bold text-[#241137]">Slide {index + 1}</p>
+                          <div className="flex flex-wrap gap-2">
+                            <label className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-full border border-[#7b47c8] bg-[#7b47c8] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#5b2ca0]">
+                              <Image size={16} />
+                              Upload
+                              <input type="file" accept="image/*" className="hidden" onChange={(event) => handleHomeHeroUpload(event, index)} />
+                            </label>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                updateHomeImages((current) => current.map((item, itemIndex) => (itemIndex === index ? '' : item)));
+                                saveNotice(`Homepage image ${index + 1} cleared.`);
+                              }}
+                              className="inline-flex items-center justify-center gap-2 rounded-full border border-[#d9c9ef] bg-white px-4 py-2 text-sm font-semibold text-[#4b2c6f] transition hover:bg-[#f5efff]"
+                            >
+                              Clear
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                updateHomeImages((current) => current.filter((_, itemIndex) => itemIndex !== index));
+                                saveNotice(`Homepage slide ${index + 1} removed.`);
+                              }}
+                              className="inline-flex items-center justify-center gap-2 rounded-full border border-[#f0c9c2] bg-[#fff4f1] px-4 py-2 text-sm font-semibold text-[#a24b3a] transition hover:bg-[#ffe9e4]"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        </div>
+                        <div className="mt-4 grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+                          <Field label="Image URL">
+                            <input
+                              className={inputClassName()}
+                              value={image}
+                              placeholder="https://example.com/home-banner.jpg"
+                              onChange={(event) => {
+                                updateHomeImages((current) =>
+                                  current.map((item, itemIndex) => (itemIndex === index ? normalizeImageUrl(event.target.value) : item)),
+                                );
+                                saveNotice(`Homepage image ${index + 1} updated.`);
+                              }}
+                            />
+                          </Field>
+                          {image ? (
+                            <img src={image} alt={`Homepage slide ${index + 1}`} className="h-44 w-full rounded-2xl object-cover" />
+                          ) : (
+                            <div className="flex h-44 items-center justify-center rounded-2xl border border-dashed border-[#d9c9ef] px-4 text-sm text-[#8a7a9f]">
+                              Image URL ya upload yahan preview dikhayega.
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                  {homeContent.heroImage ? (
-                    <img
-                      src={homeContent.heroImage}
-                      alt="Homepage hero preview"
-                      className="mt-4 h-52 w-full rounded-2xl object-cover"
-                    />
-                  ) : (
-                    <div className="mt-4 rounded-2xl border border-dashed border-[#d9c9ef] px-4 py-8 text-sm text-[#8a7a9f]">
-                      Hero image URL add karo, preview yahan dikh jayega.
-                    </div>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      updateHomeImages((current) => [...current, '']);
+                      saveNotice('New homepage image slot added.');
+                    }}
+                    className="mt-4 inline-flex items-center justify-center gap-2 rounded-full border border-[#241137] bg-[#241137] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#4b2c6f]"
+                  >
+                    <Plus size={16} />
+                    Add another image
+                  </button>
                 </div>
                 <Field label="Offer ticker messages" hint="One message per line." className="md:col-span-2">
                   <textarea className={inputClassName(true)} value={offerMessages.join('\n')} onChange={(event) => { setOfferMessages(splitLines(event.target.value)); saveNotice('Offer messages updated.'); }} />
@@ -777,10 +1259,60 @@ export default function Admin() {
                       </div>
                       <div className="grid gap-4 md:grid-cols-2">
                         <Field label="Primary image URL" className="md:col-span-2">
-                          <input className={inputClassName()} value={selectedProduct.image} onChange={(event) => { updateProduct('image', event.target.value); saveNotice('Primary image updated.'); }} />
+                          <input
+                            className={inputClassName()}
+                            value={selectedProduct.image}
+                            onChange={(event) => {
+                              updateProduct('image', normalizeImageUrl(event.target.value));
+                              saveNotice('Primary image updated.');
+                            }}
+                          />
                         </Field>
+                        <div className="md:col-span-2">
+                          <span className="mb-2 block text-xs font-bold uppercase tracking-[0.18em] text-[#6a5688]">Upload primary image</span>
+                          <label className="inline-flex h-11 cursor-pointer items-center justify-center gap-2 rounded-full border border-[#7b47c8] bg-white px-5 text-sm font-semibold text-[#7b47c8] transition hover:bg-[#f5efff]">
+                            <Image size={16} />
+                            Upload Image
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={async (event) => {
+                                const file = event.target.files?.[0];
+                                const uploadedUrl = await uploadImageFile(file);
+
+                                if (uploadedUrl) {
+                                  setProducts((current) =>
+                                    current.map((product, index) => {
+                                      if (index !== selectedProductIndex) return product;
+
+                                      const currentGallery = Array.isArray(product.images) ? product.images : [];
+                                      return {
+                                        ...product,
+                                        image: uploadedUrl,
+                                        images: [uploadedUrl, ...currentGallery.filter((image) => image && image !== uploadedUrl)],
+                                      };
+                                    }),
+                                  );
+                                }
+
+                                event.target.value = '';
+                              }}
+                            />
+                          </label>
+                          <p className="mt-2 text-xs leading-5 text-[#8a7a9f]">
+                            Uploaded file is stored as a permanent URL and added to this product gallery.
+                          </p>
+                        </div>
                         <Field label="Image gallery" hint="One image URL per line." className="md:col-span-2">
-                          <textarea className={inputClassName(true)} value={(selectedProduct.images || []).join('\n')} onChange={(event) => { updateProduct('images', splitLines(event.target.value)); saveNotice('Gallery updated.'); }} />
+                          <textarea
+                            className={inputClassName(true)}
+                            value={(selectedProduct.images || []).join('\n')}
+                            onChange={(event) => {
+                              updateProduct('images', splitLines(event.target.value).map(normalizeImageUrl));
+                              saveNotice('Gallery updated.');
+                            }}
+                          />
                         </Field>
                         <Field label="Image natural width">
                           <input className={inputClassName()} type="number" value={selectedProduct.imageWidth || 600} onChange={(event) => { updateProduct('imageWidth', Number(event.target.value) || 600); saveNotice('Image width updated.'); }} />
@@ -997,7 +1529,14 @@ export default function Admin() {
                       <input className={inputClassName()} value={selectedCollection.name} onChange={(event) => { updateCollection('name', event.target.value); saveNotice('Collection name updated.'); }} />
                     </Field>
                     <Field label="Image URL">
-                      <input className={inputClassName()} value={selectedCollection.image} onChange={(event) => { updateCollection('image', event.target.value); saveNotice('Collection image updated.'); }} />
+                      <input
+                        className={inputClassName()}
+                        value={selectedCollection.image}
+                        onChange={(event) => {
+                          updateCollection('image', normalizeImageUrl(event.target.value));
+                          saveNotice('Collection image updated.');
+                        }}
+                      />
                     </Field>
                     <Field label="Description" className="md:col-span-2">
                       <textarea className={inputClassName(true)} value={selectedCollection.description} onChange={(event) => { updateCollection('description', event.target.value); saveNotice('Collection description updated.'); }} />

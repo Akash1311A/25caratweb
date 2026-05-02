@@ -372,6 +372,11 @@ export const offerMessages = [
 export const homeContent = {
   heroBadge: 'Limited-time offers and new drops',
   heroImage: 'https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=1920&h=1200&fit=crop',
+  heroImages: [
+    'https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=1920&h=1200&fit=crop',
+    'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=1920&h=1200&fit=crop',
+    'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=1920&h=1200&fit=crop',
+  ],
   heroTitle: 'Exquisite Collections In Gold',
   heroSubtitle: 'Discover timeless elegance and exquisite craftsmanship. Each piece tells a story of luxury and grace.',
   heroPrimaryCta: 'Explore Collections',
@@ -424,4 +429,38 @@ export const brandInfo = {
   youtube: "https://www.youtube.com/@jaishreefashion",
   googleRating: 4.8,
   totalReviews: 500,
+  paymentInstructions:
+    "Prepaid orders are confirmed after payment verification. For card payments, only masked details are shown to customers and sensitive card data is never stored in this app.",
+  paymentMethods: [
+    {
+      id: "upi-primary",
+      type: "upi",
+      label: "Primary UPI",
+      provider: "Google Pay / PhonePe / Paytm",
+      upiId: "payments@25carat",
+      note: "Use this UPI ID for instant prepaid orders.",
+    },
+    {
+      id: "card-visa-demo",
+      type: "card",
+      cardType: "credit",
+      label: "Visa Credit Card",
+      holderName: "Jai Shree Fashion Pvt Ltd",
+      cardLast4: "4242",
+      expiry: "12/28",
+      issuer: "HDFC Bank",
+      note: "Accepted for prepaid luxury orders.",
+    },
+    {
+      id: "card-rupay-demo",
+      type: "card",
+      cardType: "debit",
+      label: "RuPay Debit Card",
+      holderName: "Jai Shree Fashion Pvt Ltd",
+      cardLast4: "2718",
+      expiry: "08/27",
+      issuer: "State Bank of India",
+      note: "Customers can pay using their RuPay-enabled debit card.",
+    },
+  ],
 };

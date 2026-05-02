@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowRight, LogOut } from 'lucide-react';
+import { ArrowRight, CreditCard, LogOut, Trash2 } from 'lucide-react';
 import BrandMark from '../components/BrandMark';
 import { useStore } from '../context/StoreContext';
+import { useContent } from '../context/ContentContext';
 
 function formatPrice(value) {
   return `Rs. ${Number(value || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -37,7 +38,11 @@ export default function Account() {
     recentViewedProducts,
     cartItemsDetailed,
     orders,
+    savedPaymentMethods,
+    addPaymentMethod,
+    removePaymentMethod,
   } = useStore();
+  const { brandInfo } = useContent();
 
   const [email, setEmail] = useState(profile.email || '');
   const [marketingOptIn, setMarketingOptIn] = useState(Boolean(profile.marketingOptIn));
@@ -48,6 +53,14 @@ export default function Account() {
   const [emailForOtp, setEmailForOtp] = useState('');
   const [activeTab, setActiveTab] = useState('forYou');
   const [editMode, setEditMode] = useState(false);
+  const [paymentForm, setPaymentForm] = useState({
+    holderName: '',
+    cardNumber: '',
+    expiry: '',
+    cardType: 'credit',
+    network: 'Visa',
+    note: '',
+  });
   const [editForm, setEditForm] = useState({
     fullName: profile.fullName || '',
     email: profile.email || '',
@@ -65,6 +78,8 @@ export default function Account() {
     () => cartItemsDetailed.reduce((total, item) => total + item.product.price * item.quantity, 0),
     [cartItemsDetailed],
   );
+
+  const acceptedPaymentMethods = Array.isArray(brandInfo.paymentMethods) ? brandInfo.paymentMethods : [];
 
   const handleGoogleContinue = () => {
     saveProfile({
@@ -322,6 +337,14 @@ export default function Account() {
                 Profile
               </button>
               <button
+                onClick={() => setActiveTab('payments')}
+                className={`w-full rounded-[1.2rem] px-7 py-6 text-left text-[1.15rem] font-medium ${
+                  activeTab === 'payments' ? 'bg-[#1f1f1f] text-white' : 'border border-[#dedede] bg-white text-[#111111]'
+                }`}
+              >
+                Payments
+              </button>
+              <button
                 type="button"
                 onClick={handleLogout}
                 className="flex w-full items-center gap-4 rounded-[1.2rem] border border-[#dedede] bg-white px-7 py-6 text-left text-[1.15rem] font-medium text-[#111111]"
@@ -535,6 +558,156 @@ export default function Account() {
                     </button>
                   </div>
                 )}
+              </div>
+            )}
+
+            {activeTab === 'payments' && (
+              <div>
+                <h2 className="font-serif text-[2.15rem] font-semibold text-[#111111]">Saved Payments</h2>
+                <p className="mt-3 max-w-3xl text-[#7c8697]">
+                  Aap yahan apne debit ya credit card ki masked details save kar sakte ho. Full card number aur CVV store nahi hota.
+                </p>
+                {message && <p className="mt-4 text-green-600">{message}</p>}
+
+                <div className="mt-6 grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
+                  <div className="rounded-[1.2rem] border border-[#e4e4e4] bg-white p-6 shadow-[0_8px_18px_rgba(0,0,0,0.04)]">
+                    <div className="flex items-center gap-3">
+                      <CreditCard size={20} />
+                      <h3 className="font-serif text-[1.7rem] text-[#111111]">My cards</h3>
+                    </div>
+                    <div className="mt-5 space-y-4">
+                      {savedPaymentMethods.length ? (
+                        savedPaymentMethods.map((method) => (
+                          <div key={method.id} className="rounded-[1rem] border border-[#ece7df] p-4">
+                            <div className="flex flex-wrap items-center justify-between gap-3">
+                              <div>
+                                <p className="font-semibold text-[#111111]">
+                                  {(method.network || method.label || 'Card')} {method.cardType === 'debit' ? 'Debit' : 'Credit'}
+                                </p>
+                                <p className="mt-1 text-sm text-[#7c8697]">
+                                  {method.holderName || 'Card holder'} • ending in {method.cardLast4 || '----'}
+                                </p>
+                                <p className="mt-1 text-sm text-[#7c8697]">Expiry {method.expiry || '--/--'}</p>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  removePaymentMethod(method.id);
+                                  setMessage('Saved card removed.');
+                                }}
+                                className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#dedede] text-[#111111]"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="rounded-[1rem] border border-dashed border-[#e5ddd2] px-6 py-10 text-center text-[1.05rem] text-[#7c8697]">
+                          No saved cards yet.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="rounded-[1.2rem] border border-[#e4e4e4] bg-white p-6 shadow-[0_8px_18px_rgba(0,0,0,0.04)]">
+                    <h3 className="font-serif text-[1.7rem] text-[#111111]">Add a card</h3>
+                    <form
+                      className="mt-5 grid gap-4"
+                      onSubmit={(event) => {
+                        event.preventDefault();
+                        const digits = paymentForm.cardNumber.replace(/\D/g, '');
+                        if (digits.length < 12) {
+                          setMessage('Please enter a valid card number. Only the last 4 digits will be saved.');
+                          return;
+                        }
+
+                        addPaymentMethod(paymentForm);
+                        setPaymentForm({
+                          holderName: '',
+                          cardNumber: '',
+                          expiry: '',
+                          cardType: 'credit',
+                          network: 'Visa',
+                          note: '',
+                        });
+                        setMessage('Card saved successfully. Full number was not stored.');
+                      }}
+                    >
+                      <input
+                        type="text"
+                        placeholder="Card holder name"
+                        value={paymentForm.holderName}
+                        onChange={(event) => setPaymentForm((current) => ({ ...current, holderName: event.target.value }))}
+                        className="rounded border border-[#dedede] px-3 py-3"
+                        required
+                      />
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        placeholder="Card number"
+                        value={paymentForm.cardNumber}
+                        onChange={(event) => setPaymentForm((current) => ({ ...current, cardNumber: event.target.value }))}
+                        className="rounded border border-[#dedede] px-3 py-3"
+                        required
+                      />
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <input
+                          type="text"
+                          placeholder="MM/YY"
+                          value={paymentForm.expiry}
+                          onChange={(event) => setPaymentForm((current) => ({ ...current, expiry: event.target.value }))}
+                          className="rounded border border-[#dedede] px-3 py-3"
+                          required
+                        />
+                        <select
+                          value={paymentForm.cardType}
+                          onChange={(event) => setPaymentForm((current) => ({ ...current, cardType: event.target.value }))}
+                          className="rounded border border-[#dedede] px-3 py-3"
+                        >
+                          <option value="credit">Credit card</option>
+                          <option value="debit">Debit card</option>
+                        </select>
+                      </div>
+                      <select
+                        value={paymentForm.network}
+                        onChange={(event) => setPaymentForm((current) => ({ ...current, network: event.target.value }))}
+                        className="rounded border border-[#dedede] px-3 py-3"
+                      >
+                        <option>Visa</option>
+                        <option>Mastercard</option>
+                        <option>RuPay</option>
+                        <option>Amex</option>
+                      </select>
+                      <textarea
+                        rows={3}
+                        placeholder="Optional note"
+                        value={paymentForm.note}
+                        onChange={(event) => setPaymentForm((current) => ({ ...current, note: event.target.value }))}
+                        className="rounded border border-[#dedede] px-3 py-3"
+                      />
+                      <button type="submit" className="rounded bg-[#111111] px-6 py-3 text-white">
+                        Save Card
+                      </button>
+                    </form>
+
+                    <div className="mt-6 rounded-[1rem] border border-[#ece7df] bg-[#faf8fc] p-4">
+                      <p className="text-sm font-semibold text-[#111111]">Store accepted payment details</p>
+                      <div className="mt-3 space-y-3">
+                        {acceptedPaymentMethods.map((method) => (
+                          <div key={method.id} className="rounded-xl border border-[#ece7df] bg-white p-3">
+                            <p className="font-medium text-[#111111]">{method.label}</p>
+                            <p className="mt-1 text-sm text-[#7c8697]">
+                              {method.type === 'card'
+                                ? `${method.cardType === 'debit' ? 'Debit' : 'Credit'} • ending in ${method.cardLast4 || '----'}`
+                                : `${method.provider || 'UPI'}${method.upiId ? ` • ${method.upiId}` : ''}`}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
 
