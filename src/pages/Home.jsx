@@ -63,7 +63,7 @@ export default function Home() {
 
   return (
     <div className="bg-transparent">
-      <section className="relative min-h-[88svh] overflow-hidden sm:min-h-[102vh] sm:w-screen sm:-mx-6 lg:-mx-8">
+      <section className="hero-section relative min-h-[calc(100svh-42px)] overflow-hidden sm:min-h-[102vh] sm:w-screen sm:-mx-6 lg:-mx-8">
         <div className="absolute inset-0">
           {heroImages.map((img, index) => (
             <img
@@ -75,38 +75,38 @@ export default function Home() {
                 event.currentTarget.onerror = null;
                 event.currentTarget.src = heroFallbackImage;
               }}
-              className={`absolute h-full w-full object-cover transition-opacity duration-1000 ${
+              className={`hero-slide-image absolute h-full w-full object-cover transition-opacity duration-1000 ${
                 index === currentImage ? 'opacity-100' : 'opacity-0'
               }`}
             />
           ))}
-          <div className="absolute inset-0 bg-gradient-to-r from-[#180f27]/78 via-[#2f124d]/48 to-[#180f27]/18" />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#180f27]/50 via-transparent to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-r from-[#180f27]/82 via-[#2f124d]/46 to-[#180f27]/12" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#180f27]/72 via-[#180f27]/10 to-[#180f27]/12" />
         </div>
 
-        <div className="relative z-10 flex min-h-[88svh] w-full items-center pt-28 sm:min-h-[102vh] sm:pt-32">
+        <div className="relative z-10 flex min-h-[calc(100svh-42px)] w-full items-end pb-24 pt-24 sm:min-h-[102vh] sm:items-center sm:pb-0 sm:pt-32">
           <div className="mx-auto w-full max-w-7xl px-5 sm:px-6 lg:px-8">
-            <motion.div {...fadeUp} className="max-w-2xl rounded-[2rem] bg-black/16 p-5 backdrop-blur-[2px] sm:bg-transparent sm:p-0 sm:backdrop-blur-0">
-              <div className="inline-flex rounded-full border border-white/18 bg-white/10 px-4 py-2 text-[0.68rem] font-semibold uppercase tracking-[0.28em] text-[#f1dfb1]">
+            <motion.div {...fadeUp} className="hero-copy max-w-2xl sm:bg-transparent sm:p-0">
+              <div className="hero-badge inline-flex max-w-full rounded-full border border-white/24 bg-white/12 px-4 py-2 text-[0.62rem] font-semibold uppercase tracking-[0.18em] text-[#f1dfb1] shadow-[0_10px_30px_rgba(24,15,39,0.18)] backdrop-blur-sm sm:text-[0.68rem] sm:tracking-[0.28em]">
                 {homeContent.heroBadge}
               </div>
-              <h1 className="mt-5 max-w-[9ch] font-serif text-[3rem] leading-[0.9] text-white sm:max-w-none sm:text-6xl md:text-7xl">
+              <h1 className="mt-4 max-w-[8.5ch] font-serif text-[clamp(2.55rem,13vw,3.45rem)] leading-[0.88] text-white drop-shadow-[0_4px_18px_rgba(0,0,0,0.35)] sm:mt-5 sm:max-w-none sm:text-6xl md:text-7xl">
                 {homeContent.heroTitle}
               </h1>
-              <p className="mt-6 max-w-xl text-base leading-7 text-white/92 sm:text-lg sm:leading-8">
+              <p className="mt-5 max-w-[30rem] text-[0.98rem] leading-7 text-white/90 drop-shadow-[0_2px_10px_rgba(0,0,0,0.3)] sm:mt-6 sm:text-lg sm:leading-8">
                 {homeContent.heroSubtitle}
               </p>
 
-              <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-                <Link to="/shop" className="btn-premium inline-flex w-full items-center justify-center gap-3 px-6 py-4 text-sm font-bold tracking-[0.16em] sm:w-auto sm:px-10 sm:text-base">
+              <div className="mt-7 flex flex-col gap-3 sm:mt-8 sm:flex-row sm:flex-wrap">
+                <Link to="/shop" className="btn-premium inline-flex min-h-[56px] w-full items-center justify-center gap-3 px-5 py-4 text-[0.8rem] font-bold tracking-[0.08em] sm:w-auto sm:px-10 sm:text-base sm:tracking-[0.16em]">
                   {homeContent.heroPrimaryCta.toUpperCase()} <ArrowRight size={20} />
                 </Link>
-                <Link to="/about" className="inline-flex w-full items-center justify-center rounded-full border border-white/24 bg-white/10 px-6 py-4 text-sm font-bold uppercase tracking-[0.16em] text-white transition hover:bg-white hover:text-[#180f27] sm:w-auto sm:px-8">
+                <Link to="/about" className="inline-flex min-h-[56px] w-full items-center justify-center rounded-full border border-white/34 bg-white/10 px-5 py-4 text-[0.8rem] font-bold uppercase tracking-[0.12em] text-white shadow-[0_10px_24px_rgba(24,15,39,0.14)] backdrop-blur-sm transition hover:bg-white hover:text-[#180f27] sm:w-auto sm:px-8 sm:text-sm sm:tracking-[0.16em]">
                   {homeContent.heroSecondaryCta}
                 </Link>
               </div>
 
-              <div className="mt-8 flex items-center gap-3">
+              <div className="mt-7 flex items-center gap-3 sm:mt-8">
                 {heroImages.map((_, index) => (
                   <button
                     key={index}

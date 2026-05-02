@@ -61,7 +61,7 @@ textarea:focus-visible {
 
 @media (max-width: 767px) {
   body {
-    padding-bottom: 118px;
+    padding-bottom: calc(106px + env(safe-area-inset-bottom));
   }
 }
 
@@ -201,31 +201,80 @@ h6 {
 .mobile-dock {
   position: fixed;
   left: 50%;
-  bottom: 10px;
+  bottom: calc(10px + env(safe-area-inset-bottom));
   z-index: 55;
   display: flex;
   width: calc(100% - 24px);
-  max-width: 360px;
+  max-width: 348px;
   transform: translateX(-50%);
   justify-content: space-between;
   border: 1px solid rgba(91, 44, 160, 0.12);
-  background: rgba(255, 250, 255, 0.92);
-  padding: 0.55rem;
+  background: rgba(255, 250, 255, 0.94);
+  padding: 0.5rem;
   border-radius: 999px;
-  box-shadow: 0 20px 44px rgba(47, 18, 77, 0.16);
-  backdrop-filter: blur(16px);
+  box-shadow: 0 18px 38px rgba(47, 18, 77, 0.18);
+  backdrop-filter: blur(18px);
 }
 
 .mobile-dock-item {
   position: relative;
   display: flex;
-  height: 48px;
-  width: 48px;
+  height: 46px;
+  width: 46px;
   align-items: center;
   justify-content: center;
   border-radius: 999px;
   color: #4b2c6f;
   transition: background-color 0.25s ease, color 0.25s ease, transform 0.25s ease;
+}
+
+@media (max-width: 639px) {
+  .offer-ticker {
+    height: 42px;
+  }
+
+  .offer-ticker-track {
+    gap: 2rem;
+    padding: 0.72rem 0;
+    animation-duration: 18s;
+  }
+
+  .offer-ticker-item {
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+  }
+
+  .hero-section {
+    isolation: isolate;
+  }
+
+  .hero-slide-image {
+    object-position: 58% center;
+    transform: scale(1.01);
+  }
+
+  .hero-copy {
+    width: 100%;
+    padding-bottom: clamp(0.25rem, 2svh, 1.25rem);
+  }
+
+  .hero-badge {
+    display: flex;
+    overflow-wrap: anywhere;
+    text-align: center;
+    line-height: 1.45;
+  }
+
+  .mobile-dock {
+    width: min(348px, calc(100% - 28px));
+  }
+}
+
+@media (max-width: 380px) {
+  .mobile-dock-item {
+    height: 43px;
+    width: 43px;
+  }
 }
 
 .mobile-dock-item-active {

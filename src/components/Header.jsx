@@ -57,8 +57,8 @@ export default function Header() {
 
       <header className={`fixed left-0 right-0 top-[42px] z-50 transition ${headerSolid ? 'border-b border-[#5b2ca0]/15 bg-[#fbf7ff]/95 shadow-md backdrop-blur-md' : 'bg-transparent'}`}>
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex h-20 items-center justify-between gap-3">
-          <button className={`rounded-full border p-2 transition-all duration-300 md:hidden ${headerSolid ? 'border-[#5b2ca0]/25 bg-[#5b2ca0]/8 text-[#4B2C6F]' : 'border-white/35 bg-[#5b2ca0]/18 text-white'}`} onClick={() => setOpen((value) => !value)}>
+          <div className="flex h-16 items-center justify-between gap-3 md:h-20">
+          <button className={`flex h-11 w-11 items-center justify-center rounded-full border transition-all duration-300 md:hidden ${headerSolid ? 'border-[#5b2ca0]/25 bg-[#5b2ca0]/8 text-[#4B2C6F]' : 'border-white/35 bg-[#5b2ca0]/18 text-white shadow-[0_10px_22px_rgba(24,15,39,0.16)] backdrop-blur-sm'}`} onClick={() => setOpen((value) => !value)} aria-label={open ? 'Close menu' : 'Open menu'}>
             {open ? <X size={24} /> : <Menu size={24} />}
           </button>
 
@@ -142,7 +142,8 @@ export default function Header() {
             <button
               type="button"
               onClick={() => navigate('/shop')}
-              className={`rounded-full border p-2 transition-all duration-300 ${headerSolid ? 'border-[#5b2ca0]/25 bg-[#5b2ca0]/8 hover:border-[#7b47c8]/45 hover:bg-[#5b2ca0]/14 hover:text-[#7b47c8]' : 'border-white/35 bg-[#5b2ca0]/18 hover:border-white/60 hover:bg-[#7b47c8]/30'}`}
+              className={`flex h-11 w-11 items-center justify-center rounded-full border transition-all duration-300 ${headerSolid ? 'border-[#5b2ca0]/25 bg-[#5b2ca0]/8 hover:border-[#7b47c8]/45 hover:bg-[#5b2ca0]/14 hover:text-[#7b47c8]' : 'border-white/35 bg-[#5b2ca0]/18 shadow-[0_10px_22px_rgba(24,15,39,0.16)] backdrop-blur-sm hover:border-white/60 hover:bg-[#7b47c8]/30'}`}
+              aria-label="Search products"
             >
               <Search size={18} />
             </button>
